@@ -16,5 +16,28 @@ def get_db():
         db.close()
 
 def init_db():
-    from models import User, Task, Doc  # noqa
+    # Import models so metadata is populated before create_all.
+    from models import (  # noqa: F401
+        AuditLog,
+        Doc,
+        DocSignature,
+        DocVersion,
+        Epic,
+        IntegrationConnection,
+        IntegrationLog,
+        MarketplaceApp,
+        MarketplaceInstallation,
+        Project,
+        Sprint,
+        SupportComment,
+        SupportTicket,
+        Task,
+        TaskComment,
+        Team,
+        TeamMember,
+        SystemSetting,
+        TwoFactorSecret,
+        User,
+    )
+
     Base.metadata.create_all(bind=engine)
