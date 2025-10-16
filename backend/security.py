@@ -1,5 +1,6 @@
 import os
 import jwt
+import pyotp
 from datetime import datetime, timedelta
 from passlib.context import CryptContext
 
@@ -31,3 +32,12 @@ def create_refresh_token(data: dict):
 
 def decode_token(token: str):
     return jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+
+
+def generate_totp_secret() -> str:
+    return pyotp.random_base32()
+
+
+def verify_totp(token: str, secret: str) -> bool:
+    totp = pyotp.TOTP(secret)
+    return totp.verify(token, valid_window=1)
