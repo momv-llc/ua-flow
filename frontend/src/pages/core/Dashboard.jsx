@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { listAnalyticsSummary, listProjects, listTasks } from '../../api'
 import StatCard from '../../components/common/StatCard'
 import Loader from '../../components/common/Loader'
 import ErrorState from '../../components/common/ErrorState'
+import ModuleShowcase from '../../components/dashboard/ModuleShowcase'
+import Card from '../../components/ui/Card'
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true)
@@ -10,6 +13,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null)
   const [projects, setProjects] = useState([])
   const [tasks, setTasks] = useState([])
+  const { t } = useTranslation()
 
   async function fetchData() {
     setLoading(true)
@@ -39,57 +43,62 @@ export default function Dashboard() {
 
   return (
     <div className="grid" style={{ gap: 24 }}>
+      <ModuleShowcase />
+
       <div className="grid three">
         <StatCard
-          title="Активных задач"
+          title={t('dashboard.stats.activeTasks')}
           value={stats?.core?.active_tasks ?? tasks.length}
           trend={stats?.core?.task_growth || 0}
-          trendLabel="за неделю"
+          trendLabel={t('dashboard.stats.activeTrend')}
           icon="🗂️"
         />
         <StatCard
-          title="Средний SLA (часы)"
+          title={t('dashboard.stats.sla')}
           value={stats?.support?.avg_sla_hours ?? '—'}
           trend={-1 * (stats?.support?.sla_delta || 0)}
-          trendLabel="быстрее, чем раньше"
+          trendLabel={t('dashboard.stats.slaTrend')}
           icon="🛟"
         />
         <StatCard
-          title="Документов подписано"
+          title={t('dashboard.stats.docsSigned')}
           value={stats?.docs?.signed_count ?? 0}
           trend={stats?.docs?.weekly_growth || 0}
-          trendLabel="подписей"
+          trendLabel={t('dashboard.stats.docsTrend')}
           icon="✍️"
         />
       </div>
 
-      <section className="panel">
-        <h2>Проекты и спринты</h2>
-        <div className="grid two" style={{ marginTop: 16 }}>
-          {projects.map((project) => (
-            <div key={project.id} className="panel" style={{ background: 'var(--bg-elevated)' }}>
-              <div className="badge-dot">{project.name}</div>
-              <div style={{ marginTop: 8, color: 'var(--text-muted)', fontSize: '0.9rem' }}>{project.description}</div>
-              <div style={{ marginTop: 16, display: 'flex', gap: 12 }}>
-                <span className="tag success">{project.methodology}</span>
-                <span className="tag warning">Key: {project.key}</span>
+      <Card title={t('dashboard.projects.title')}>
+        {projects.length === 0 ? (
+          <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>{t('dashboard.projects.empty')}</p>
+        ) : (
+          <div className="grid two">
+            {projects.map((project) => (
+              <div key={project.id} className="panel" style={{ background: 'var(--color-elevated)' }}>
+                <div className="badge-dot">{project.name}</div>
+                <div style={{ marginTop: 8, color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+                  {project.description}
+                </div>
+                <div style={{ marginTop: 16, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                  <span className="tag success">{t('dashboard.projects.methodology')}: {project.methodology}</span>
+                  <span className="tag warning">{t('dashboard.projects.key')}: {project.key}</span>
+                </div>
               </div>
-            </div>
-          ))}
-          {projects.length === 0 && <div style={{ color: 'var(--text-muted)' }}>У вас пока нет проектов.</div>}
-        </div>
-      </section>
+            ))}
+          </div>
+        )}
+      </Card>
 
-      <section className="panel">
-        <h2>Фокусные задачи</h2>
+      <Card title={t('dashboard.focus.title')}>
         <table className="table" style={{ marginTop: 12 }}>
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Название</th>
-              <th>Статус</th>
-              <th>Исполнитель</th>
-              <th>Срок</th>
+              <th>{t('dashboard.focus.columns.id')}</th>
+              <th>{t('dashboard.focus.columns.title')}</th>
+              <th>{t('dashboard.focus.columns.status')}</th>
+              <th>{t('dashboard.focus.columns.assignee')}</th>
+              <th>{t('dashboard.focus.columns.due')}</th>
             </tr>
           </thead>
           <tbody>
@@ -106,14 +115,14 @@ export default function Dashboard() {
             ))}
             {tasks.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-muted)' }}>
-                  Назначенные задачи не найдены
+                <td colSpan={5} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--color-text-muted)' }}>
+                  {t('dashboard.focus.empty')}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
-      </section>
+      </Card>
     </div>
   )
 }

@@ -20,12 +20,36 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRE_MIN: ${JWT_EXPIRE_MIN}
       REFRESH_EXPIRE_DAYS: ${REFRESH_EXPIRE_DAYS}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      CELERY_EAGER: "0"
     depends_on:
       - db
+      - redis
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app/backend
+
+  worker:
+    build: ./backend
+    command: celery -A backend.celery_app.celery_app worker --loglevel=info
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      CELERY_EAGER: "0"
+    depends_on:
+      - backend
+      - redis
+    volumes:
+      - ./backend:/app/backend
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
 
   frontend:
     build: ./frontend

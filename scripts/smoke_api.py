@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 # Force a local SQLite database so the smoke test does not depend on external
 # PostgreSQL services when executed in CI or developer machines.
 os.environ.setdefault("DATABASE_URL", "sqlite:///./smoke_test.db")
+os.environ.setdefault("CELERY_EAGER", "1")
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:

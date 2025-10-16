@@ -16,6 +16,7 @@ import MarketplacePage from './pages/marketplace/Marketplace'
 import AdminUsersPage from './pages/admin/Users'
 import LoginPage from './pages/auth/Login'
 import RegisterPage from './pages/auth/Register'
+import './i18n'
 import './styles.css'
 
 function App() {

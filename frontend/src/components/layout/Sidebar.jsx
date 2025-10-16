@@ -1,47 +1,55 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { NavLink } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../providers/AuthProvider'
 
-const sections = [
-  {
-    title: 'Платформа',
-    links: [
-      { to: '/', label: 'Дашборд', icon: '📊' },
-      { to: '/core/tasks', label: 'Задачи', icon: '🗂️' },
-      { to: '/docs', label: 'Документы', icon: '📚' },
-      { to: '/support', label: 'Служба поддержки', icon: '🛟' },
-      { to: '/integrations', label: 'Integration Hub', icon: '🔌' },
-    ],
-  },
-  {
-    title: 'Управление',
-    links: [
-      { to: '/analytics', label: 'Аналитика', icon: '📈' },
-      { to: '/settings', label: 'Настройки', icon: '⚙️' },
-      { to: '/marketplace', label: 'Маркетплейс', icon: '🧩' },
-    ],
-  },
-]
-
-const adminSection = {
-  title: 'Администрирование',
-  links: [
-    { to: '/admin/users', label: 'Пользователи и роли', icon: '🛡️' },
-    { to: '/admin/audit', label: 'Аудит и безопасность', icon: '🗒️' },
-  ],
-}
-
 export default function Sidebar() {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const role = user?.role || 'user'
+
+  const sections = useMemo(
+    () => [
+      {
+        title: t('nav.platform'),
+        links: [
+          { to: '/', label: t('nav.dashboard'), icon: '📊' },
+          { to: '/core/tasks', label: t('nav.tasks'), icon: '🗂️' },
+          { to: '/docs', label: t('nav.docs'), icon: '📚' },
+          { to: '/support', label: t('nav.support'), icon: '🛟' },
+          { to: '/integrations', label: t('nav.integrations'), icon: '🔌' },
+        ],
+      },
+      {
+        title: t('nav.management'),
+        links: [
+          { to: '/analytics', label: t('nav.analytics'), icon: '📈' },
+          { to: '/settings', label: t('nav.settings'), icon: '⚙️' },
+          { to: '/marketplace', label: t('nav.marketplace'), icon: '🧩' },
+        ],
+      },
+    ],
+    [t],
+  )
+
+  const adminSection = useMemo(
+    () => ({
+      title: t('nav.admin'),
+      links: [
+        { to: '/admin/users', label: t('nav.users'), icon: '🛡️' },
+        { to: '/admin/audit', label: t('nav.audit'), icon: '🗒️' },
+      ],
+    }),
+    [t],
+  )
 
   return (
     <aside className="sidebar">
       <div className="logo">
         <span style={{ fontSize: '1.8rem' }}>🇺🇦</span>
         <div>
-          <div>UA FLOW</div>
-          <small style={{ opacity: 0.75 }}>Национальная платформа</small>
+          <div style={{ fontWeight: 700 }}>UA FLOW</div>
+          <small style={{ opacity: 0.75 }}>{t('brand.tagline')}</small>
         </div>
       </div>
 

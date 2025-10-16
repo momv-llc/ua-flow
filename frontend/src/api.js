@@ -204,8 +204,24 @@ export async function testIntegration(id) {
   return request(`/integrations/connections/${id}/test`, { method: 'POST' })
 }
 
-export async function syncIntegration(id, payload) {
-  return request(`/integrations/connections/${id}/sync`, { method: 'POST', data: payload })
+export async function syncIntegration(id, payload, mode = 'async') {
+  return request(`/integrations/connections/${id}/sync`, {
+    method: 'POST',
+    data: payload,
+    params: { mode },
+  })
+}
+
+export async function getIntegrationTask(taskId) {
+  return request(`/integrations/tasks/${taskId}`)
+}
+
+export async function listIntegrationSandboxes() {
+  return request('/integrations/sandboxes')
+}
+
+export async function runIntegrationSandbox(slug, payload) {
+  return request(`/integrations/sandboxes/${slug}`, { method: 'POST', data: payload })
 }
 
 export async function listAdminUsers() {

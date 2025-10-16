@@ -1,12 +1,15 @@
 import React, { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../providers/AuthProvider'
+import Button from '../../components/ui/Button'
 import '../../styles.css'
 
 export default function LoginPage() {
   const navigate = useNavigate()
   const { login } = useAuth()
   const [params] = useSearchParams()
+  const { t } = useTranslation()
   const [form, setForm] = useState({
     email: params.get('email') || 'admin@example.com',
     password: 'admin123',
@@ -30,16 +33,24 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'linear-gradient(140deg, #0d6efd 0%, #fde047 100%)' }}>
-      <div className="panel" style={{ width: 'min(480px, 90vw)' }}>
-        <div className="chip">UA FLOW • Единая авторизация</div>
-        <h1 style={{ marginTop: 12 }}>Вход в систему</h1>
-        <p style={{ color: 'var(--text-muted)' }}>
-          Используйте корпоративную почту или учетную запись Telegram Login / eID для входа. 2FA поддерживается.
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'grid',
+        placeItems: 'center',
+        background: 'linear-gradient(140deg, #0d6efd 0%, #fde047 100%)',
+        padding: 24,
+      }}
+    >
+      <div className="panel" style={{ width: 'min(460px, 92vw)' }}>
+        <div className="ui-chip">UA FLOW • {t('brand.tagline')}</div>
+        <h1 style={{ marginTop: 12 }}>{t('auth.loginTitle')}</h1>
+        <p style={{ color: 'var(--color-text-muted)' }}>
+          {t('topbar.description')}
         </p>
         <form className="grid" style={{ marginTop: 24 }} onSubmit={handleSubmit}>
           <label>
-            <div style={{ fontSize: '0.8rem', marginBottom: 6 }}>Email</div>
+            <div style={{ fontSize: '0.8rem', marginBottom: 6 }}>{t('auth.email')}</div>
             <input
               type="email"
               required
@@ -48,7 +59,7 @@ export default function LoginPage() {
             />
           </label>
           <label>
-            <div style={{ fontSize: '0.8rem', marginBottom: 6 }}>Пароль</div>
+            <div style={{ fontSize: '0.8rem', marginBottom: 6 }}>{t('auth.password')}</div>
             <input
               type="password"
               required
@@ -65,11 +76,11 @@ export default function LoginPage() {
             />
           </label>
           <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <button className="primary" type="submit" disabled={loading}>
-              {loading ? 'Входим...' : 'Войти'}
-            </button>
-            <Link to="/auth/register" style={{ color: 'var(--accent)' }}>
-              Регистрация нового аккаунта
+            <Button type="submit" disabled={loading}>
+              {loading ? '…' : t('auth.submit')}
+            </Button>
+            <Link to="/auth/register" style={{ color: 'var(--color-accent)' }}>
+              {t('auth.noAccount')} {t('auth.goRegister')}
             </Link>
           </div>
         </form>

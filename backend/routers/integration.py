@@ -4,14 +4,15 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime
 from hashlib import sha256
 import hmac
 from typing import Any, Dict, Iterable
 
-from fastapi import APIRouter, Depends, HTTPException
+from celery.result import AsyncResult
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from backend.celery_app import celery_app
 from backend.database import get_db
 from backend.dependencies import audit_log, get_current_user, require_roles
 from backend.models import (
@@ -26,11 +27,21 @@ from backend.schemas import (
     IntegrationCreate,
     IntegrationLogOut,
     IntegrationOut,
+    IntegrationSandboxExchange,
+    IntegrationSandboxOut,
+    IntegrationTaskStatus,
     IntegrationUpdate,
     MarketplaceAppOut,
     MarketplaceInstallOut,
 )
-from backend.services.integration_clients import IntegrationError, build_client
+from backend.services.integration_runner import (
+    IntegrationInactiveError,
+    execute_ping,
+    execute_sync,
+)
+from backend.services.integration_clients import IntegrationError
+from backend.services.integration_sandboxes import list_sandboxes, simulate_exchange
+from backend.tasks.integration import enqueue_integration_sync
 
 
 router = APIRouter()
@@ -84,35 +95,6 @@ def _serialize_connection(conn: IntegrationConnection) -> IntegrationOut:
         "updated_at": conn.updated_at,
     }
     return IntegrationOut.model_validate(payload)
-
-
-def _record_log(
-    db: Session,
-    connection: IntegrationConnection,
-    status: str,
-    payload: Dict[str, Any],
-    response_code: int,
-    direction: str = "outbound",
-) -> IntegrationLog:
-    serialized = json.dumps(payload, ensure_ascii=False)[:2000]
-    log = IntegrationLog(
-        connection_id=connection.id,
-        direction=direction,
-        status=status,
-        payload=serialized,
-        response_code=response_code,
-    )
-    connection.last_synced_at = datetime.utcnow()
-    if status == "success":
-        connection.last_sync_status = "Success"
-    else:
-        connection.last_sync_status = f"Failed ({status})"
-    db.add(log)
-    db.add(connection)
-    db.commit()
-    db.refresh(log)
-    db.refresh(connection)
-    return log
 
 
 def _ensure_marketplace_catalog(db: Session) -> None:
@@ -215,22 +197,13 @@ def test_integration(
     if not conn:
         raise HTTPException(status_code=404, detail="Integration not found")
 
-    client = build_client(conn.integration_type, conn.settings)
     try:
-        result = client.ping()
+        outcome = execute_ping(db, conn, context="api")
     except IntegrationError as exc:
-        _record_log(db, conn, "error", {"action": "test", "error": str(exc)}, 0)
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    _record_log(
-        db,
-        conn,
-        "success",
-        {"action": "test", "response": result.body},
-        result.status_code,
-    )
     audit_log(user, "integration.tested", {"connection_id": conn.id}, db)
-    return IntegrationActionResult(status="ok", details={"response": result.body})
+    return IntegrationActionResult(status="ok", details={"response": outcome.body})
 
 
 @router.post(
@@ -241,6 +214,7 @@ def test_integration(
 def trigger_sync(
     connection_id: int,
     payload: Dict[str, Any],
+    mode: str = Query("async", regex="^(async|sync)$"),
     db: Session = Depends(get_db),
     user: User = Depends(require_roles("admin", "integrator")),
 ):
@@ -250,31 +224,32 @@ def trigger_sync(
     if not conn.is_active:
         raise HTTPException(status_code=400, detail="Integration disabled")
 
-    client = build_client(conn.integration_type, conn.settings)
-    try:
-        result = client.sync(payload or {})
-    except IntegrationError as exc:
-        _record_log(
-            db,
-            conn,
-            "error",
-            {"action": "sync", "payload": payload, "error": str(exc)},
-            0,
+    if mode == "sync":
+        try:
+            outcome = execute_sync(db, conn, payload or {}, context="api-sync")
+        except IntegrationInactiveError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except IntegrationError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        audit_log(user, "integration.synced", {"connection_id": conn.id, "mode": "sync"}, db)
+        return IntegrationActionResult(
+            status="success",
+            details={"status_code": outcome.status_code, "response": outcome.body},
         )
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    _record_log(
+    job = enqueue_integration_sync(conn.id, payload or {})
+    audit_log(
+        user,
+        "integration.synced",  # reuse event name for queue scheduling
+        {"connection_id": conn.id, "mode": "async", "task_id": job.id},
         db,
-        conn,
-        "success",
-        {"action": "sync", "payload": payload, "response": result.body},
-        result.status_code,
     )
-    audit_log(user, "integration.synced", {"connection_id": conn.id}, db)
-    return IntegrationActionResult(
-        status="success",
-        details={"status_code": result.status_code, "response": result.body},
-    )
+
+    if celery_app.conf.task_always_eager:
+        result = job.get()
+        return IntegrationActionResult(status="success", details={"task_id": job.id, "response": result})
+
+    return IntegrationActionResult(status="queued", details={"task_id": job.id})
 
 
 @router.get(
@@ -295,6 +270,65 @@ def list_logs(
             .order_by(IntegrationLog.created_at.desc())
             .all()
     )
+
+
+@router.get("/tasks/{task_id}", response_model=IntegrationTaskStatus)
+def get_task_status(task_id: str):
+    result = AsyncResult(task_id, app=celery_app)
+    details: Dict[str, Any] | None = None
+    error: str | None = None
+
+    if result.successful():
+        try:
+            details = result.get()
+        except Exception as exc:  # pragma: no cover - defensive
+            error = str(exc)
+    elif result.failed():
+        error = str(result.result)
+
+    return IntegrationTaskStatus(
+        task_id=task_id,
+        state=result.state,
+        retries=getattr(result, "retries", 0) or 0,
+        details=details,
+        error=error,
+    )
+
+
+@router.get(
+    "/sandboxes",
+    response_model=list[IntegrationSandboxOut],
+)
+def list_sandbox_profiles(
+    user: User = Depends(require_roles("admin", "integrator", "moderator")),
+):
+    return [
+        IntegrationSandboxOut(
+            slug=item.slug,
+            title=item.title,
+            description=item.description,
+            request_example=item.request_example,
+            response_example=item.response_example,
+            notes=item.notes,
+        )
+        for item in list_sandboxes()
+    ]
+
+
+@router.post(
+    "/sandboxes/{slug}",
+    response_model=IntegrationSandboxExchange,
+)
+def run_sandbox(
+    slug: str,
+    payload: Dict[str, Any],
+    user: User = Depends(require_roles("admin", "integrator", "moderator")),
+):
+    try:
+        response = simulate_exchange(slug, payload)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Sandbox not found") from exc
+    return IntegrationSandboxExchange(**response)
 
 
 # ---------------------------------------------------------------------------

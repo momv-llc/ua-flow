@@ -395,6 +395,30 @@ class IntegrationActionResult(BaseModel):
     details: Dict[str, Any]
 
 
+class IntegrationTaskStatus(BaseModel):
+    task_id: str
+    state: str
+    retries: int
+    details: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+
+
+class IntegrationSandboxOut(BaseModel):
+    slug: str
+    title: str
+    description: str
+    request_example: Dict[str, Any]
+    response_example: Dict[str, Any]
+    notes: list[str]
+
+
+class IntegrationSandboxExchange(BaseModel):
+    sandbox: str
+    echo: Dict[str, Any]
+    response: Dict[str, Any]
+    notes: list[str]
+
+
 class MarketplaceAppOut(BaseModel):
     id: int
     slug: str
