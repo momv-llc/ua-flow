@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -68,6 +68,7 @@ def create_task(
     sprint = db.get(Sprint, payload.sprint_id) if payload.sprint_id else None
     epic = db.get(Epic, payload.epic_id) if payload.epic_id else None
 
+    now = datetime.utcnow()
     task = Task(
         title=payload.title,
         description=payload.description,
@@ -82,6 +83,8 @@ def create_task(
         project_id=project.id if project else None,
         sprint_id=sprint.id if sprint else None,
         epic_id=epic.id if epic else None,
+        updated_at=now,
+        completed_at=now if payload.status == TaskStatus.done else None,
     )
 
     db.add(task)
@@ -117,8 +120,15 @@ def update_task(
     if user.role not in {"admin", "moderator"} and task.owner_id != user.id:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    data = payload.model_dump(exclude_unset=True)
+    for field, value in data.items():
         setattr(task, field, value)
+    task.updated_at = datetime.utcnow()
+    if "status" in data:
+        if data["status"] == TaskStatus.done:
+            task.completed_at = datetime.utcnow()
+        else:
+            task.completed_at = None
 
     db.commit()
     db.refresh(task)

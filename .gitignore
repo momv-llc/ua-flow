@@ -18,6 +18,7 @@ frontend/dist/
 
 # Database
 *.db
+backups/
 
 # IDE
 .vscode/

@@ -57,6 +57,7 @@ def create_ticket(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    now = datetime.utcnow()
     ticket = SupportTicket(
         subject=payload.subject,
         body=payload.body,
@@ -64,6 +65,7 @@ def create_ticket(
         channel=payload.channel,
         sla_due=_assign_sla(payload.priority),
         requester_id=user.id,
+        updated_at=now,
     )
     db.add(ticket)
     db.commit()
@@ -100,6 +102,11 @@ def update_ticket(
         setattr(ticket, field, value)
     if "priority" in data:
         ticket.sla_due = _assign_sla(ticket.priority)
+    if "status" in data and data["status"] in {TicketStatus.resolved, TicketStatus.closed}:
+        ticket.resolved_at = datetime.utcnow()
+    elif "status" in data and data["status"] in {TicketStatus.new, TicketStatus.in_progress, TicketStatus.waiting}:
+        ticket.resolved_at = None
+    ticket.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(ticket)
     audit_log(user, "support.ticket_updated", {"ticket_id": ticket.id}, db)
@@ -120,6 +127,7 @@ def assign_ticket(
         raise HTTPException(status_code=404, detail="Assignee not found")
     ticket.assignee_id = assignee_id
     ticket.status = TicketStatus.in_progress
+    ticket.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(ticket)
     audit_log(user, "support.ticket_assigned", {"ticket_id": ticket.id, "assignee_id": assignee_id}, db)

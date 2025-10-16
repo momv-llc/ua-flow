@@ -1,17 +1,37 @@
-FROM python:3.12-slim
+FROM python:3.12-slim AS builder
+
+ENV VIRTUAL_ENV=/opt/venv
+RUN python -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 WORKDIR /app
 
-# Install backend dependencies first to leverage Docker layer caching.
 COPY requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
-# Copy the backend package into /app/backend so "backend.*" imports resolve
-# consistently in both development and production containers.
+
+FROM python:3.12-slim AS runtime
+
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder $VIRTUAL_ENV $VIRTUAL_ENV
+
+WORKDIR /app
+
 COPY . /app/backend
 
-# Ensure Python can import the backend package from /app.
 ENV PYTHONPATH="/app"
+
+RUN adduser --disabled-password --gecos "" uaflow \
+    && chown -R uaflow:uaflow /app
+
+USER uaflow
 
 EXPOSE 8000
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

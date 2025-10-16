@@ -207,6 +207,8 @@ class Task(Base):
     sprint_id = Column(Integer, ForeignKey("sprints.id", ondelete="SET NULL"), nullable=True)
     epic_id = Column(Integer, ForeignKey("epics.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
 
     owner = relationship("User", back_populates="tasks", foreign_keys=[owner_id])
     assignee = relationship(
@@ -301,6 +303,7 @@ class SupportTicket(Base):
     assignee_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    resolved_at = Column(DateTime, nullable=True)
 
     requester = relationship(
         "User",
@@ -430,3 +433,14 @@ class MarketplaceInstallation(Base):
 
     app = relationship("MarketplaceApp", back_populates="installations")
     installer = relationship("User")
+
+
+class AnalyticsSnapshot(Base):
+    __tablename__ = "analytics_snapshots"
+    __table_args__ = (UniqueConstraint("metric", "bucket", name="uq_metric_bucket"),)
+
+    id = Column(Integer, primary_key=True)
+    metric = Column(String(100), nullable=False, index=True)
+    bucket = Column(String(64), nullable=False, index=True)
+    payload = Column(JSON, default=dict, nullable=False)
+    collected_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)

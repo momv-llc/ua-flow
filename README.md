@@ -38,16 +38,29 @@ docker compose up --build
 > API без внешнего PostgreSQL. Для продакшна обязательно укажите
 > `DATABASE_URL` со строкой подключения к PostgreSQL.
 
-## Очереди интеграций
+## Очереди интеграций и аналитики
 
 - Redis поднимается автоматически (`redis` сервис в `docker-compose.yml`).
 - Celery-воркер запускается отдельным сервисом `worker` (команда `celery -A backend.celery_app.celery_app worker`).
 - Настройки брокера и результата настраиваются переменными `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND`. Для локальной разработки включён eager-режим (задачи выполняются синхронно при отсутствии Redis).
 - Подробные спецификации обмена и песочницы описаны в [docs/integrations/](docs/integrations/README.md).
+- ETL пайплайн описан в [docs/analytics/README.md](docs/analytics/README.md) и доступен через Celery-задачу `analytics.run_pipeline`.
 
 ## Локализация UI
 
 Фронтенд использует i18next и поддерживает три языка: українська, English, русский. Переключатель языка доступен в шапке интерфейса и сохраняется в `localStorage`.
+
+## CI/CD и релизный пайплайн
+
+- GitHub Actions workflow: `.github/workflows/ci.yml` (см. [описание](docs/devops/ci_cd.md)).
+- Генерация OpenAPI и Postman коллекции: `python scripts/export_openapi.py` (артефакты в [docs/api](docs/api)).
+- Backend Docker образ собирается мультистадийным Dockerfile (`backend/Dockerfile`).
+- Helm chart для Kubernetes: `deploy/helm/ua-flow-backend`.
+
+## Резервное копирование
+
+- PostgreSQL сценарии описаны в [docs/devops/backup.md](docs/devops/backup.md).
+- Для локальной SQLite используйте `./scripts/backup_db.sh` — бэкап сохраняется в `backups/`.
 
 ## Проверка сборки в Ubuntu Docker
 

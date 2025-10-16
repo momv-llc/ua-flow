@@ -45,6 +45,10 @@ celery_app.conf.update(
     enable_utc=True,
     task_always_eager=settings.task_always_eager,
     broker_connection_retry_on_startup=True,
+    task_routes={
+        "backend.tasks.integration.*": {"queue": "ua_flow.integrations"},
+        "backend.tasks.analytics.*": {"queue": "ua_flow.analytics"},
+    },
 )
 
 celery_app.autodiscover_tasks(["backend.tasks"])

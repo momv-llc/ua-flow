@@ -216,6 +216,8 @@ class TaskOut(TaskBase):
     id: int
     owner_id: Optional[int]
     created_at: datetime
+    updated_at: datetime
+    completed_at: Optional[datetime]
 
     class Config:
         from_attributes = True
@@ -321,6 +323,7 @@ class TicketOut(BaseModel):
     assignee_id: Optional[int]
     created_at: datetime
     updated_at: datetime
+    resolved_at: Optional[datetime]
 
     class Config:
         from_attributes = True

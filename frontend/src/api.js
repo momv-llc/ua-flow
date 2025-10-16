@@ -237,7 +237,7 @@ export async function updateUserRole(userId, role) {
 }
 
 export async function listAnalyticsSummary() {
-  return request('/analytics/overview')
+  return request('/analytics/summary')
 }
 
 export async function listAnalyticsVelocity(params) {
@@ -246,6 +246,14 @@ export async function listAnalyticsVelocity(params) {
 
 export async function listAnalyticsSupport(params) {
   return request('/analytics/support', { params })
+}
+
+export async function getAnalyticsStatus() {
+  return request('/analytics/etl/status')
+}
+
+export async function runAnalyticsEtl(params) {
+  return request('/analytics/etl/run', { method: 'POST', params })
 }
 
 export async function listSettings() {

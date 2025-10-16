@@ -1,5 +1,11 @@
-import React, { useEffect, useState } from 'react'
-import { listAnalyticsSummary, listAnalyticsSupport, listAnalyticsVelocity } from '../../api'
+import React, { useEffect, useMemo, useState } from 'react'
+import {
+  getAnalyticsStatus,
+  listAnalyticsSummary,
+  listAnalyticsSupport,
+  listAnalyticsVelocity,
+  runAnalyticsEtl,
+} from '../../api'
 import Loader from '../../components/common/Loader'
 import ErrorState from '../../components/common/ErrorState'
 
@@ -9,23 +15,55 @@ export default function AnalyticsPage() {
   const [support, setSupport] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [status, setStatus] = useState(null)
+  const [running, setRunning] = useState(false)
+  const [etlError, setEtlError] = useState(null)
+
+  const collectedAt = useMemo(() => summary?.collected_at || status?.collected_at, [summary, status])
+
+  const formattedCollectedAt = useMemo(() => {
+    if (!collectedAt) return null
+    try {
+      return new Date(collectedAt).toLocaleString()
+    } catch (err) {
+      return collectedAt
+    }
+  }, [collectedAt])
 
   async function load() {
     setLoading(true)
     setError(null)
     try {
-      const [overview, velocityData, supportData] = await Promise.all([
+      const [overview, velocityData, supportData, statusData] = await Promise.all([
         listAnalyticsSummary(),
         listAnalyticsVelocity({ weeks: 6 }),
         listAnalyticsSupport({ weeks: 6 }),
+        getAnalyticsStatus(),
       ])
       setSummary(overview)
       setVelocity(velocityData)
       setSupport(supportData)
+      setStatus(statusData)
     } catch (err) {
       setError(err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleRunEtl() {
+    setRunning(true)
+    setEtlError(null)
+    try {
+      const result = await runAnalyticsEtl({ weeks: 6 })
+      setSummary({ ...result.summary, collected_at: result.collected_at })
+      setVelocity(result.velocity)
+      setSupport(result.support)
+      setStatus({ collected_at: result.collected_at })
+    } catch (err) {
+      setEtlError(err)
+    } finally {
+      setRunning(false)
     }
   }
 
@@ -39,7 +77,22 @@ export default function AnalyticsPage() {
   return (
     <div className="grid" style={{ gap: 24 }}>
       <section className="panel">
-        <h2>Сводка по платформе</h2>
+        <div className="panel__header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h2>Сводка по платформе</h2>
+            {formattedCollectedAt && (
+              <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>Последнее обновление: {formattedCollectedAt}</div>
+            )}
+          </div>
+          <button className="ui-button ui-button--primary" onClick={handleRunEtl} disabled={running}>
+            {running ? 'Обновление…' : 'Запустить ETL'}
+          </button>
+        </div>
+        {etlError && (
+          <div style={{ color: 'var(--color-danger)', marginTop: 8, fontSize: 12 }}>
+            Не удалось обновить витрину: {etlError.message || 'ошибка' }
+          </div>
+        )}
         <div className="grid three" style={{ marginTop: 16 }}>
           <div className="panel" style={{ background: 'var(--bg-elevated)' }}>
             <div className="chip">Команды</div>

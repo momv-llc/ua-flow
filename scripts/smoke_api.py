@@ -19,6 +19,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from backend.database import Base, SessionLocal, engine  # noqa: E402  # pylint: disable=wrong-import-position
+import backend.models  # noqa: F401,E402  # pylint: disable=unused-import,wrong-import-position
 from backend.main import app  # noqa: E402  # pylint: disable=wrong-import-position
 
 

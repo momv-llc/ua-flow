@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from functools import lru_cache
 
 from dotenv import load_dotenv
@@ -10,6 +9,8 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import declarative_base, sessionmaker
+
+from .secrets import get_secret
 
 
 # Ensure values from a local .env file are available when running via uvicorn.
@@ -19,7 +20,7 @@ load_dotenv()
 def _resolve_database_url() -> str:
     """Return the database URL with a safe fallback for local development."""
 
-    url = os.getenv("DATABASE_URL")
+    url = get_secret("DATABASE_URL")
     if url:
         return url
     # Default to a local SQLite database so new developers can boot the API
@@ -76,6 +77,7 @@ def init_db():
         DocSignature,
         DocVersion,
         Epic,
+        AnalyticsSnapshot,
         IntegrationConnection,
         IntegrationLog,
         MarketplaceApp,

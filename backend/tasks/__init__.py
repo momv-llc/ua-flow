@@ -1,4 +1,4 @@
 """Task namespace for Celery workers."""
 
-__all__ = ["integration"]
+__all__ = ["integration", "analytics"]
 
