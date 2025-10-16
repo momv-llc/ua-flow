@@ -264,6 +264,54 @@ export async function updateSetting(key, value) {
   return request(`/admin/settings/${key}`, { method: 'PUT', data: { value } })
 }
 
+export async function listPaymentPlans(includeInactive = false) {
+  return request('/billing/plans', { params: { include_inactive: includeInactive } })
+}
+
+export async function createPaymentPlan(payload) {
+  return request('/billing/plans', { method: 'POST', data: payload })
+}
+
+export async function updatePaymentPlan(planId, payload) {
+  return request(`/billing/plans/${planId}`, { method: 'PUT', data: payload })
+}
+
+export async function listPaymentMethods() {
+  return request('/billing/methods')
+}
+
+export async function addPaymentMethod(payload) {
+  return request('/billing/methods', { method: 'POST', data: payload })
+}
+
+export async function setDefaultPaymentMethod(methodId) {
+  return request(`/billing/methods/${methodId}/default`, { method: 'POST' })
+}
+
+export async function deletePaymentMethod(methodId) {
+  return request(`/billing/methods/${methodId}`, { method: 'DELETE' })
+}
+
+export async function listSubscriptions(scope = 'mine') {
+  return request('/billing/subscriptions', { params: { scope } })
+}
+
+export async function createSubscription(payload) {
+  return request('/billing/subscriptions', { method: 'POST', data: payload })
+}
+
+export async function cancelSubscription(subscriptionId) {
+  return request(`/billing/subscriptions/${subscriptionId}/cancel`, { method: 'POST' })
+}
+
+export async function createCheckout(payload) {
+  return request('/billing/checkout', { method: 'POST', data: payload })
+}
+
+export async function listTransactions(scope = 'mine') {
+  return request('/billing/transactions', { params: { scope } })
+}
+
 export async function listMarketplaceApps() {
   return request('/integrations/marketplace')
 }

@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
 from backend.models import (
+    PaymentGateway,
+    PaymentMethodType,
+    PaymentPlanInterval,
+    SubscriptionStatus,
+    TransactionStatus,
     IntegrationType,
     SprintStatus,
     TaskPriority,
@@ -64,6 +70,19 @@ class TwoFactorVerifyIn(BaseModel):
 
 class RoleUpdate(BaseModel):
     role: str
+
+
+class SettingOut(BaseModel):
+    key: str
+    value: str
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class SettingUpdate(BaseModel):
+    value: str
 
 
 # ---------------------------------------------------------------------------
@@ -451,3 +470,112 @@ class ReportFilters(BaseModel):
     team_id: Optional[int] = None
     from_date: Optional[date] = None
     to_date: Optional[date] = None
+
+
+# ---------------------------------------------------------------------------
+# Billing & Payments
+# ---------------------------------------------------------------------------
+
+
+class PaymentPlanBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    price: Decimal = Field(ge=0)
+    currency: str = Field(min_length=3, max_length=3, default="UAH")
+    interval: PaymentPlanInterval = PaymentPlanInterval.monthly
+    trial_days: int = Field(default=14, ge=0)
+    features: List[str] = Field(default_factory=list)
+    is_active: bool = True
+
+
+class PaymentPlanCreate(PaymentPlanBase):
+    pass
+
+
+class PaymentPlanOut(PaymentPlanBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PaymentMethodCreate(BaseModel):
+    method_type: PaymentMethodType
+    gateway: PaymentGateway
+    label: str
+    details: Dict[str, Any] = Field(default_factory=dict)
+
+
+class PaymentMethodOut(BaseModel):
+    id: int
+    method_type: PaymentMethodType
+    gateway: PaymentGateway
+    label: str
+    details: Dict[str, Any]
+    is_default: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class SubscriptionCreate(BaseModel):
+    plan_id: int
+    payment_method_id: Optional[int] = None
+    auto_renew: bool = True
+
+
+class SubscriptionOut(BaseModel):
+    id: int
+    plan_id: int
+    status: SubscriptionStatus
+    auto_renew: bool
+    current_period_end: Optional[datetime]
+    trial_ends_at: Optional[datetime]
+    payment_method_id: Optional[int]
+    created_at: datetime
+    updated_at: datetime
+    metadata: Dict[str, Any] = Field(default_factory=dict, alias="metadata_json")
+
+    class Config:
+        from_attributes = True
+        populate_by_name = True
+
+
+class CheckoutRequest(BaseModel):
+    plan_id: int
+    payment_method_id: Optional[int] = None
+    gateway: Optional[PaymentGateway] = None
+    amount_override: Optional[Decimal] = Field(default=None, ge=0)
+
+
+class CheckoutResponse(BaseModel):
+    reference: str
+    status: TransactionStatus
+    amount: Decimal
+    currency: str
+    payment_url: Optional[str] = None
+
+
+class PaymentTransactionOut(BaseModel):
+    id: int
+    reference: str
+    gateway: PaymentGateway
+    amount: Decimal
+    currency: str
+    status: TransactionStatus
+    error_message: Optional[str]
+    created_at: datetime
+    processed_at: Optional[datetime]
+    subscription_id: Optional[int]
+    plan_id: Optional[int]
+
+    class Config:
+        from_attributes = True
+
+
+class TransactionStatusUpdate(BaseModel):
+    status: TransactionStatus
+    error_message: Optional[str] = None

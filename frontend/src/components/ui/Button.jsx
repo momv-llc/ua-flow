@@ -4,6 +4,7 @@ const VARIANTS = {
   primary: 'ui-button ui-button--primary',
   secondary: 'ui-button ui-button--secondary',
   ghost: 'ui-button ui-button--ghost',
+  danger: 'ui-button ui-button--danger',
 }
 
 export default function Button({ variant = 'primary', className = '', icon, children, ...props }) {

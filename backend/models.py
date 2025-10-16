@@ -5,6 +5,8 @@ from __future__ import annotations
 import enum
 from datetime import date, datetime
 
+from decimal import Decimal
+
 from sqlalchemy import (
     Boolean,
     Column,
@@ -14,6 +16,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     JSON,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -60,6 +63,53 @@ class TicketPriority(str, enum.Enum):
     urgent = "Urgent"
 
 
+class PaymentGateway(str, enum.Enum):
+    """External payment providers supported by UA FLOW."""
+
+    liqpay = "liqpay"
+    fondy = "fondy"
+    wayforpay = "wayforpay"
+    stripe = "stripe"
+    bank = "bank_transfer"
+    invoice = "invoice"
+
+
+class PaymentMethodType(str, enum.Enum):
+    """Supported user-facing payment method categories."""
+
+    card = "card"
+    bank_account = "bank_account"
+    ewallet = "ewallet"
+    invoice = "invoice"
+
+
+class PaymentPlanInterval(str, enum.Enum):
+    """Billing frequency options for paid plans."""
+
+    monthly = "monthly"
+    quarterly = "quarterly"
+    yearly = "yearly"
+    onetime = "onetime"
+
+
+class SubscriptionStatus(str, enum.Enum):
+    """Lifecycle status for organization subscriptions."""
+
+    trialing = "trialing"
+    active = "active"
+    past_due = "past_due"
+    canceled = "canceled"
+
+
+class TransactionStatus(str, enum.Enum):
+    """Processing states for payment transactions."""
+
+    pending = "pending"
+    succeeded = "succeeded"
+    failed = "failed"
+    refunded = "refunded"
+
+
 class IntegrationType(str, enum.Enum):
     """Available integration connector types."""
 
@@ -104,6 +154,21 @@ class User(Base):
         "SupportTicket",
         back_populates="assignee",
         foreign_keys="SupportTicket.assignee_id",
+    )
+    payment_methods = relationship(
+        "PaymentMethod",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    subscriptions = relationship(
+        "Subscription",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    payment_transactions = relationship(
+        "PaymentTransaction",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
 
 
@@ -444,3 +509,81 @@ class AnalyticsSnapshot(Base):
     bucket = Column(String(64), nullable=False, index=True)
     payload = Column(JSON, default=dict, nullable=False)
     collected_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+
+class PaymentPlan(Base):
+    __tablename__ = "payment_plans"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(120), nullable=False)
+    description = Column(Text, default="")
+    price = Column(Numeric(12, 2), nullable=False, default=Decimal("0"))
+    currency = Column(String(3), default="UAH")
+    interval = Column(Enum(PaymentPlanInterval), default=PaymentPlanInterval.monthly)
+    trial_days = Column(Integer, default=14)
+    features = Column(JSON, default=list)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    subscriptions = relationship("Subscription", back_populates="plan")
+    transactions = relationship("PaymentTransaction", back_populates="plan")
+
+
+class PaymentMethod(Base):
+    __tablename__ = "payment_methods"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    method_type = Column(Enum(PaymentMethodType), nullable=False)
+    gateway = Column(Enum(PaymentGateway), nullable=False)
+    label = Column(String(150), nullable=False)
+    details = Column(JSON, default=dict)
+    is_default = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="payment_methods")
+    subscriptions = relationship("Subscription", back_populates="payment_method")
+
+
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    plan_id = Column(Integer, ForeignKey("payment_plans.id", ondelete="CASCADE"), nullable=False)
+    payment_method_id = Column(Integer, ForeignKey("payment_methods.id", ondelete="SET NULL"))
+    status = Column(Enum(SubscriptionStatus), default=SubscriptionStatus.trialing)
+    current_period_end = Column(DateTime, nullable=True)
+    trial_ends_at = Column(DateTime, nullable=True)
+    auto_renew = Column(Boolean, default=True)
+    metadata_json = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User", back_populates="subscriptions")
+    plan = relationship("PaymentPlan", back_populates="subscriptions")
+    payment_method = relationship("PaymentMethod", back_populates="subscriptions")
+    transactions = relationship("PaymentTransaction", back_populates="subscription")
+
+
+class PaymentTransaction(Base):
+    __tablename__ = "payment_transactions"
+
+    id = Column(Integer, primary_key=True)
+    subscription_id = Column(Integer, ForeignKey("subscriptions.id", ondelete="SET NULL"))
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    plan_id = Column(Integer, ForeignKey("payment_plans.id", ondelete="SET NULL"))
+    gateway = Column(Enum(PaymentGateway), nullable=False)
+    amount = Column(Numeric(12, 2), nullable=False, default=Decimal("0"))
+    currency = Column(String(3), default="UAH")
+    status = Column(Enum(TransactionStatus), default=TransactionStatus.pending)
+    reference = Column(String(120), unique=True, nullable=False)
+    error_message = Column(String(255), nullable=True)
+    raw_response = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    processed_at = Column(DateTime, nullable=True)
+
+    subscription = relationship("Subscription", back_populates="transactions")
+    user = relationship("User", back_populates="payment_transactions")
+    plan = relationship("PaymentPlan", back_populates="transactions")

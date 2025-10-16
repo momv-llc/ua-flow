@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
 from .database import init_db
-from .routers import analytics, auth, docs, integration, projects, support, tasks
+from .routers import admin, analytics, auth, billing, docs, integration, projects, support, tasks
 
 app = FastAPI(
     title="UA FLOW MVP",
@@ -29,6 +29,8 @@ app.include_router(support.router, prefix="/api/v1/support", tags=["Support"])
 app.include_router(integration.router, prefix="/api/v1/integrations", tags=["Integrations"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
+app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"])
+app.include_router(billing.router, prefix="/api/v1/billing", tags=["Billing"])
 
 @app.on_event("startup")
 def startup_event():

@@ -13,11 +13,14 @@ import IntegrationsPage from './pages/integrations/Integrations'
 import AnalyticsPage from './pages/analytics/Analytics'
 import SettingsPage from './pages/settings/Settings'
 import MarketplacePage from './pages/marketplace/Marketplace'
+import BillingPage from './pages/billing/Billing'
 import AdminUsersPage from './pages/admin/Users'
+import AdminAuditPage from './pages/admin/Audit'
 import LoginPage from './pages/auth/Login'
 import RegisterPage from './pages/auth/Register'
 import './i18n'
 import './styles.css'
+import '@fontsource-variable/inter/index.css'
 
 function App() {
   return (
@@ -37,10 +40,12 @@ function App() {
                 <Route path="integrations" element={<IntegrationsPage />} />
                 <Route path="analytics" element={<AnalyticsPage />} />
                 <Route path="settings" element={<SettingsPage />} />
+                <Route path="billing" element={<BillingPage />} />
                 <Route path="marketplace" element={<MarketplacePage />} />
 
                 <Route element={<ProtectedRoute roles={['admin', 'moderator']} />}>
                   <Route path="admin/users" element={<AdminUsersPage />} />
+                  <Route path="admin/audit" element={<AdminAuditPage />} />
                 </Route>
               </Route>
             </Route>

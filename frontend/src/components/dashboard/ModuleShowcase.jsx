@@ -38,6 +38,15 @@ const MODULES = [
       { id: 'SUP-219', status: 'Escalated', channel: 'Email' },
     ],
   },
+  {
+    key: 'billing',
+    icon: '💳',
+    payments: [
+      { method: 'LiqPay', status: 'Active', volume: '₴24 000' },
+      { method: 'Fondy', status: 'Sandbox', volume: '₴12 400' },
+      { method: 'Invoice', status: 'Pending', volume: '₴31 500' },
+    ],
+  },
 ]
 
 export default function ModuleShowcase() {
@@ -123,6 +132,18 @@ export default function ModuleShowcase() {
               <div className="badge-dot">{ticket.id}</div>
               <div style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>{ticket.channel}</div>
               <div style={{ fontWeight: 600 }}>{ticket.status}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {activeModule?.payments && (
+        <div className="grid three">
+          {activeModule.payments.map((item) => (
+            <div key={item.method} className="panel">
+              <div className="badge-dot">{item.method}</div>
+              <div style={{ marginTop: 8, color: 'var(--color-text-muted)' }}>{item.status}</div>
+              <div style={{ marginTop: 12, fontSize: '1.4rem', fontWeight: 700 }}>{item.volume}</div>
             </div>
           ))}
         </div>

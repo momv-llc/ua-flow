@@ -25,6 +25,7 @@ export default function Sidebar() {
         links: [
           { to: '/analytics', label: t('nav.analytics'), icon: '📈' },
           { to: '/settings', label: t('nav.settings'), icon: '⚙️' },
+          { to: '/billing', label: t('nav.billing'), icon: '💳' },
           { to: '/marketplace', label: t('nav.marketplace'), icon: '🧩' },
         ],
       },

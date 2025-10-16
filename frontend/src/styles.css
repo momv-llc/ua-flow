@@ -217,6 +217,12 @@ button {
   border: 1px dashed var(--color-border-strong);
 }
 
+.ui-button--danger {
+  background: rgba(239, 68, 68, 0.16);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.28);
+}
+
 .ui-button:hover {
   transform: translateY(-1px);
 }
@@ -458,4 +464,86 @@ form.grid {
   .nav-title {
     width: 100%;
   }
+}
+
+.billing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 24px;
+}
+
+.plan-card {
+  background: var(--color-elevated);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.plan-card.active {
+  border-color: var(--color-accent);
+  box-shadow: 0 20px 36px rgba(37, 99, 235, 0.18);
+  transform: translateY(-4px);
+}
+
+.plan-card__header h3 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.plan-card__header p {
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+}
+
+.plan-card__price span {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.plan-card__price small {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-text-muted);
+}
+
+.plan-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.billing-method-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.billing-method-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.billing-method-form input,
+.billing-method-form select {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  padding: 10px 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
 }

@@ -23,6 +23,7 @@ docker compose up --build
 - `/api/v1/integrations` — Integration Hub (1C, Medoc, SPI, Diia, Prozorro, Webhooks) с Celery-очередью и песочницами.
 - `/api/v1/admin` — управление пользователями, настройками, аудитом.
 - `/api/v1/analytics` — метрики, тепловые карты тикетов, загрузка.
+- `/api/v1/billing` — тарифы, способы оплаты, подписки и журналы транзакций.
 
 ## Дефолтные креды
 
@@ -56,6 +57,33 @@ docker compose up --build
 - Генерация OpenAPI и Postman коллекции: `python scripts/export_openapi.py` (артефакты в [docs/api](docs/api)).
 - Backend Docker образ собирается мультистадийным Dockerfile (`backend/Dockerfile`).
 - Helm chart для Kubernetes: `deploy/helm/ua-flow-backend`.
+
+## Зависимости для чистого сервера
+
+1. **Системные пакеты**: `sudo apt-get install -y curl git build-essential python3 python3-venv python3-pip`.
+2. **Docker Engine + Compose**: [инструкция](https://docs.docker.com/engine/install/ubuntu/); убедитесь, что `docker compose version ≥ 2.20`.
+3. **Node.js 20 LTS**: через `nvm`, `fnm` или официальный репозиторий Nodesource.
+4. **PostgreSQL 15+ и Redis 7** (продакшн). Для локального запуска хватает SQLite и eager-режима Celery.
+5. **GitHub Actions runner / Make / rsync** — опционально, для CI и выкладки чартов.
+
+После установки зависимостей можно запускать проект через `docker compose up --build` или по отдельности (`pip install -r backend/requirements.txt`, `npm --prefix frontend install`, `npm --prefix frontend run build`, `uvicorn backend.main:app`).
+
+## Состояние проекта
+
+### Реализовано
+- Модули Core, Tasks, Docs, Support, Integrations, Admin, Analytics и Billing — API, UI-страницы, i18n и темизация.
+- Очереди Celery/Redis, smoke-тесты (`scripts/smoke_api.py`), OpenAPI/Postman экспорт, Helm-chart, GitHub Actions CI.
+- Marketplace и Integration Hub с песочницами, а также расширенный дизайн-сет и шрифт Inter.
+
+### Осталось
+- Подключить боевые аккаунты LiqPay/Fondy/WayForPay, 1С/Медок/СПІ/Дія и завершить интеграционное тестирование.
+- Настроить промышленную БД PostgreSQL + объектное хранилище для документов/подписей.
+- Добавить роль супер-администратора и разграничение прав для биллинга/финансов.
+
+### Возможные расширения
+- SDK для маркетплейса (хуки, UI-компоненты, REST-расширения).
+- Автоматизация сверки оплат (банковские выписки, вебхуки провайдеров, OCR счетов).
+- PWA/мобильные клиенты, push-уведомления, интеграция с корпоративными SSO.
 
 ## Резервное копирование
 
