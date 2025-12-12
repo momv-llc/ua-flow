@@ -25,7 +25,7 @@ def get_effective_user_rate(db: Session, user_id: int, target_date: date) -> Opt
 
 def calculate_project_actuals(
     db: Session, project_id: int, from_date: Optional[date] = None, to_date: Optional[date] = None
-) -> Dict[str, int]:
+) -> Dict[str, float | int]:
     """Aggregate hours and costs for a project between dates."""
 
     query = db.query(Worklog).filter(Worklog.project_id == project_id)
@@ -34,13 +34,15 @@ def calculate_project_actuals(
     if to_date:
         query = query.filter(Worklog.work_date <= to_date)
 
-    hours_total = 0
+    minutes_total = 0
     cost_total = 0
     for log in query.all():
-        hours_total += log.spent_hours
+        minutes_total += log.spent_hours
         rate = get_effective_user_rate(db, log.user_id, log.work_date)
         if rate:
             cost_total += int((log.spent_hours / 60) * rate.hourly_rate)
+
+    hours_total = minutes_total / 60
 
     expenses_total = 0
     # ProjectExpense import inside function to avoid circular imports
