@@ -2,8 +2,18 @@ from fastapi import FastAPI
 from database import init_db
 from routers import analytics, auth, docs, integration, projects, support, tasks
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
-app = FastAPI(title="UA FLOW MVP", version="0.1.0")
+from database import init_db
+from routers import analytics, auth, docs, integration, projects, support, tasks
+
+app = FastAPI(
+    title="UA FLOW MVP",
+    version="0.1.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
+)
 
 origins = ["*"]
 app.add_middleware(
@@ -29,3 +39,10 @@ def startup_event():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/api", include_in_schema=False)
+def docs_redirect():
+    """Help operators discover the interactive API explorer under the /api namespace."""
+
+    return RedirectResponse(url="/api/docs")

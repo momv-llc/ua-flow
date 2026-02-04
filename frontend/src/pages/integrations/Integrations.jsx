@@ -48,16 +48,41 @@ export default function IntegrationsPage() {
     }
   }
 
-  async function handleAction(id, action) {
+  async function fetchLogs(id) {
     try {
-      if (action === 'test') {
-        await testIntegration(id)
-      } else {
-        await syncIntegration(id)
-      }
-      await fetchIntegrations()
+      const data = await listIntegrationLogs(id)
+      setLogs(data)
+      setSelectedIntegration(id)
     } catch (err) {
       setError(err)
+    }
+  }
+
+  async function handleAction(id, action) {
+    setWorking(true)
+    setError(null)
+    try {
+      if (action === 'test') {
+        const result = await testIntegration(id)
+        setActionResult({ type: 'test', response: result.details })
+      } else {
+        let parsed = {}
+        if (syncPayload.trim()) {
+          try {
+            parsed = JSON.parse(syncPayload)
+          } catch (err) {
+            throw new Error('Sync payload должен быть корректным JSON')
+          }
+        }
+        const result = await syncIntegration(id, parsed)
+        setActionResult({ type: 'sync', response: result.details })
+      }
+      await fetchIntegrations()
+      await fetchLogs(id)
+    } catch (err) {
+      setError(err)
+    } finally {
+      setWorking(false)
     }
   }
 
@@ -150,6 +175,60 @@ export default function IntegrationsPage() {
           ))}
           {integrations.length === 0 && <div style={{ color: 'var(--text-muted)' }}>Интеграции не настроены</div>}
         </div>
+      </section>
+
+      <section className="panel">
+        <h2>Настройки синхронизации</h2>
+        <div className="grid" style={{ gap: 16 }}>
+          <label style={{ display: 'block' }}>
+            <div style={{ fontSize: '0.8rem', marginBottom: 6 }}>Payload (JSON)</div>
+            <textarea
+              value={syncPayload}
+              onChange={(event) => setSyncPayload(event.target.value)}
+              placeholder='{ "operation": "catalogs" }'
+              rows={6}
+            />
+          </label>
+          {actionResult && (
+            <div className="panel" style={{ background: 'var(--bg-elevated)' }}>
+              <div style={{ fontWeight: 600 }}>Результат {actionResult.type === 'test' ? 'теста' : 'синхронизации'}</div>
+              <pre style={{ marginTop: 8, whiteSpace: 'pre-wrap', fontSize: '0.75rem' }}>
+                {JSON.stringify(actionResult.response, null, 2)}
+              </pre>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="panel">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2>Логи интеграции</h2>
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+            {selectedDetails ? selectedDetails.name : 'Не выбрана'}
+          </span>
+        </div>
+        {logs.length === 0 ? (
+          <div style={{ marginTop: 16, color: 'var(--text-muted)' }}>Логи появятся после синхронизации</div>
+        ) : (
+          <div className="table" style={{ marginTop: 16 }}>
+            <div className="thead">
+              <div>Дата</div>
+              <div>Статус</div>
+              <div>Код</div>
+              <div>Payload</div>
+            </div>
+            {logs.map((log) => (
+              <div key={log.id} className="tr">
+                <div>{formatDate(log.created_at)}</div>
+                <div>{log.status}</div>
+                <div>{log.response_code}</div>
+                <div>
+                  <pre style={{ whiteSpace: 'pre-wrap', fontSize: '0.7rem' }}>{log.payload}</pre>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="panel">
