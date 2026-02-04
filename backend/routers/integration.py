@@ -55,21 +55,60 @@ def update_integration(
 
     data = payload.model_dump(exclude_unset=True)
     if "is_active" in data:
-        conn.is_active = 1 if data["is_active"] else 0
+        conn.is_active = bool(data["is_active"])
     if "name" in data:
         conn.name = data["name"]
+    if "description" in data:
+        conn.description = data["description"] or ""
     if "settings" in data:
-        conn.settings = data["settings"]
+        conn.settings = data["settings"] or {}
+    db.add(conn)
     db.commit()
     db.refresh(conn)
     audit_log(user, "integration.updated", {"connection_id": conn.id}, db)
-    return conn
+    return _serialize_connection(conn)
 
 
-@router.post("/{connection_id}/sync", response_model=IntegrationLogOut, status_code=201)
+@router.post(
+    "/connections/{connection_id}/test",
+    response_model=IntegrationActionResult,
+    status_code=200,
+)
+def test_integration(
+    connection_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles("admin", "integrator")),
+):
+    conn = db.get(IntegrationConnection, connection_id)
+    if not conn:
+        raise HTTPException(status_code=404, detail="Integration not found")
+
+    client = build_client(conn.integration_type, conn.settings)
+    try:
+        result = client.ping()
+    except IntegrationError as exc:
+        _record_log(db, conn, "error", {"action": "test", "error": str(exc)}, 0)
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    _record_log(
+        db,
+        conn,
+        "success",
+        {"action": "test", "response": result.body},
+        result.status_code,
+    )
+    audit_log(user, "integration.tested", {"connection_id": conn.id}, db)
+    return IntegrationActionResult(status="ok", details={"response": result.body})
+
+
+@router.post(
+    "/connections/{connection_id}/sync",
+    response_model=IntegrationActionResult,
+    status_code=200,
+)
 def trigger_sync(
     connection_id: int,
-    payload: dict,
+    payload: Dict[str, Any],
     db: Session = Depends(get_db),
     user: User = Depends(require_roles("admin", "integrator")),
 ):
@@ -100,6 +139,37 @@ def trigger_sync(
 
 
 @router.get("/{connection_id}/logs", response_model=list[IntegrationLogOut])
+    client = build_client(conn.integration_type, conn.settings)
+    try:
+        result = client.sync(payload or {})
+    except IntegrationError as exc:
+        _record_log(
+            db,
+            conn,
+            "error",
+            {"action": "sync", "payload": payload, "error": str(exc)},
+            0,
+        )
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    _record_log(
+        db,
+        conn,
+        "success",
+        {"action": "sync", "payload": payload, "response": result.body},
+        result.status_code,
+    )
+    audit_log(user, "integration.synced", {"connection_id": conn.id}, db)
+    return IntegrationActionResult(
+        status="success",
+        details={"status_code": result.status_code, "response": result.body},
+    )
+
+
+@router.get(
+    "/connections/{connection_id}/logs",
+    response_model=list[IntegrationLogOut],
+)
 def list_logs(
     connection_id: int,
     db: Session = Depends(get_db),
@@ -114,3 +184,86 @@ def list_logs(
         .order_by(IntegrationLog.created_at.desc())
         .all()
     )
+            .filter(IntegrationLog.connection_id == connection_id)
+            .order_by(IntegrationLog.created_at.desc())
+            .all()
+    )
+
+
+# ---------------------------------------------------------------------------
+# Marketplace catalog
+# ---------------------------------------------------------------------------
+
+
+@router.get("/marketplace", response_model=list[MarketplaceAppOut])
+def list_marketplace_apps(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles("admin", "integrator", "moderator")),
+):
+    _ensure_marketplace_catalog(db)
+    apps = db.query(MarketplaceApp).order_by(MarketplaceApp.name).all()
+    installations = {
+        inst.app_id: inst
+        for inst in db.query(MarketplaceInstallation).order_by(MarketplaceInstallation.installed_at.desc())
+    }
+    return [_serialize_marketplace_app(app, installations.get(app.id)) for app in apps]
+
+
+@router.post(
+    "/marketplace/{app_id}/install",
+    response_model=MarketplaceInstallOut,
+    status_code=201,
+)
+def install_marketplace_app(
+    app_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles("admin", "integrator")),
+):
+    _ensure_marketplace_catalog(db)
+    app = db.get(MarketplaceApp, app_id)
+    if not app:
+        raise HTTPException(status_code=404, detail="Marketplace application not found")
+
+    installation = (
+        db.query(MarketplaceInstallation)
+        .filter(MarketplaceInstallation.app_id == app.id)
+        .first()
+    )
+    if installation:
+        return MarketplaceInstallOut(
+            message="Application already installed",
+            app=_serialize_marketplace_app(app, installation),
+        )
+
+    installation = MarketplaceInstallation(app_id=app.id, installed_by=user.id, settings={})
+    db.add(installation)
+    db.commit()
+    db.refresh(installation)
+    audit_log(user, "marketplace.install", {"app_id": app.id}, db)
+    return MarketplaceInstallOut(
+        message="Application installed",
+        app=_serialize_marketplace_app(app, installation),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Webhook utilities
+# ---------------------------------------------------------------------------
+
+
+@router.post("/webhooks/preview")
+def preview_webhook(payload: Dict[str, Any]) -> Dict[str, Any]:
+    serialized = json.dumps(payload, sort_keys=True, ensure_ascii=False)
+    signature = hmac.new(
+        WEBHOOK_PREVIEW_SECRET.encode("utf-8"),
+        serialized.encode("utf-8"),
+        sha256,
+    ).hexdigest()
+    return {
+        "payload": payload,
+        "signature": signature,
+        "headers": {
+            "X-UA-Flow-Signature": signature,
+            "Content-Type": "application/json",
+        },
+    }

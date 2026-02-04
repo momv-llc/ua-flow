@@ -44,3 +44,24 @@ def workload(db: Session = Depends(get_db), user: User = Depends(get_current_use
         .count()
     )
     return {"open": owned, "overdue": overdue}
+
+
+@router.get("/timebilling/summary")
+def timebilling_summary(
+    project_id: int,
+    from_date: date | None = Query(default=None),
+    to_date: date | None = Query(default=None),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    project = db.get(Project, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    actuals = calculate_project_actuals(db, project_id, from_date, to_date)
+    return {
+        "project_id": project_id,
+        "actual_cost": actuals["cost_total"],
+        "expenses_total": actuals["expenses_total"],
+        "hours_total": actuals["hours_total"],
+        "total_with_expenses": actuals["total_with_expenses"],
+    }

@@ -236,6 +236,21 @@ class TaskCommentOut(BaseModel):
         from_attributes = True
 
 
+class TaskCommentCreate(BaseModel):
+    message: str
+
+
+class TaskCommentOut(BaseModel):
+    id: int
+    task_id: int
+    author_id: Optional[int]
+    message: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # ---------------------------------------------------------------------------
 # Docs
 # ---------------------------------------------------------------------------
@@ -351,12 +366,14 @@ class TicketCommentOut(BaseModel):
 class IntegrationCreate(BaseModel):
     name: str
     integration_type: IntegrationType
-    settings: Dict[str, Any] = {}
+    description: Optional[str] = None
+    settings: Dict[str, Any] = Field(default_factory=dict)
 
 
 class IntegrationUpdate(BaseModel):
     name: Optional[str] = None
     is_active: Optional[bool] = None
+    description: Optional[str] = None
     settings: Optional[Dict[str, Any]] = None
 
 
@@ -364,10 +381,199 @@ class IntegrationOut(BaseModel):
     id: int
     name: str
     integration_type: IntegrationType
+    description: str
     is_active: bool
+    status: str
+    last_synced_at: Optional[datetime]
     settings: Dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
     updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class IntegrationLogOut(BaseModel):
+    id: int
+    direction: str
+    status: str
+    payload: str
+    response_code: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class IntegrationActionResult(BaseModel):
+    status: str
+    details: Dict[str, Any]
+
+
+class MarketplaceAppOut(BaseModel):
+    id: int
+    slug: str
+    name: str
+    description: str
+    category: str
+    website: Optional[str]
+    icon: Optional[str]
+    installed: bool = False
+    installed_at: Optional[datetime] = None
+
+
+class MarketplaceInstallOut(BaseModel):
+    message: str
+    app: MarketplaceAppOut
+
+
+class DashboardMetric(BaseModel):
+    name: str
+    value: Any
+    delta: Optional[float] = None
+
+
+class ReportFilters(BaseModel):
+    project_id: Optional[int] = None
+    sprint_id: Optional[int] = None
+    team_id: Optional[int] = None
+    from_date: Optional[date] = None
+    to_date: Optional[date] = None
+
+
+# ---------------------------------------------------------------------------
+# Time & Billing
+# ---------------------------------------------------------------------------
+
+
+class WorklogCreate(BaseModel):
+    task_id: Optional[int] = None
+    project_id: Optional[int] = None
+    spent_hours: int = Field(gt=0)
+    work_date: date
+    description: Optional[str] = ""
+
+
+class WorklogOut(BaseModel):
+    id: int
+    user_id: int
+    task_id: Optional[int]
+    project_id: Optional[int]
+    spent_hours: int
+    work_date: date
+    description: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class UserRateCreate(BaseModel):
+    user_id: int
+    currency: str = "USD"
+    hourly_rate: int = Field(gt=0)
+    valid_from: date
+    valid_to: Optional[date] = None
+
+
+class UserRateOut(BaseModel):
+    id: int
+    user_id: int
+    currency: str
+    hourly_rate: int
+    valid_from: date
+    valid_to: Optional[date]
+
+    class Config:
+        from_attributes = True
+
+
+class ProjectBudgetUpsert(BaseModel):
+    project_id: int
+    currency: str = "USD"
+    planned_hours: int = Field(ge=0)
+    planned_cost: int = Field(ge=0)
+
+
+class ProjectBudgetOut(BaseModel):
+    id: int
+    project_id: int
+    currency: str
+    planned_hours: int
+    planned_cost: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ProjectExpenseCreate(BaseModel):
+    project_id: int
+    description: Optional[str] = ""
+    amount: int = Field(gt=0)
+    currency: str = "USD"
+    expense_date: date
+    category: Optional[str] = "general"
+
+
+class ProjectExpenseOut(BaseModel):
+    id: int
+    project_id: int
+    description: str
+    amount: int
+    currency: str
+    expense_date: date
+    category: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class InvoiceItemCreate(BaseModel):
+    description: str
+    quantity: int = Field(gt=0)
+    unit_price: int = Field(gt=0)
+
+
+class InvoiceCreate(BaseModel):
+    project_id: Optional[int] = None
+    client_name: str
+    client_details: Optional[str] = ""
+    currency: str = "USD"
+    issue_date: date
+    due_date: Optional[date] = None
+    tax_percent: Optional[float] = 0.0
+    items: List[InvoiceItemCreate]
+
+
+class InvoiceItemOut(BaseModel):
+    id: int
+    description: str
+    quantity: int
+    unit_price: int
+    line_total: int
+
+    class Config:
+        from_attributes = True
+
+
+class InvoiceOut(BaseModel):
+    id: int
+    project_id: Optional[int]
+    external_id: str
+    client_name: str
+    client_details: str
+    currency: str
+    status: str
+    issue_date: date
+    due_date: Optional[date]
+    subtotal: int
+    tax_amount: int
+    total: int
+    created_at: datetime
+    items: List[InvoiceItemOut]
 
     class Config:
         from_attributes = True

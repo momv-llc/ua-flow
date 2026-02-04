@@ -164,15 +164,19 @@ export async function createTicket(payload) {
 }
 
 export async function listIntegrations() {
-  return request('/integration/connections')
+  return request('/integrations/connections')
+}
+
+export async function listIntegrationLogs(id) {
+  return request(`/integrations/connections/${id}/logs`)
 }
 
 export async function testIntegration(id) {
-  return request(`/integration/connections/${id}/test`, { method: 'POST' })
+  return request(`/integrations/connections/${id}/test`, { method: 'POST' })
 }
 
-export async function syncIntegration(id) {
-  return request(`/integration/connections/${id}/sync`, { method: 'POST' })
+export async function syncIntegration(id, payload) {
+  return request(`/integrations/connections/${id}/sync`, { method: 'POST', data: payload })
 }
 
 export async function listAdminUsers() {
@@ -208,15 +212,15 @@ export async function updateSetting(key, value) {
 }
 
 export async function listMarketplaceApps() {
-  return request('/integration/marketplace')
+  return request('/integrations/marketplace')
 }
 
 export async function installMarketplaceApp(appId) {
-  return request(`/integration/marketplace/${appId}/install`, { method: 'POST' })
+  return request(`/integrations/marketplace/${appId}/install`, { method: 'POST' })
 }
 
 export async function triggerWebhookPreview(payload) {
-  return request('/integration/webhooks/preview', { method: 'POST', data: payload })
+  return request('/integrations/webhooks/preview', { method: 'POST', data: payload })
 }
 
 export async function logout() {
