@@ -563,3 +563,28 @@ class InvoiceOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class IntegrationLogOut(BaseModel):
+    id: int
+    direction: str
+    status: str
+    payload: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class DashboardMetric(BaseModel):
+    name: str
+    value: Any
+    delta: Optional[float] = None
+
+
+class ReportFilters(BaseModel):
+    project_id: Optional[int] = None
+    sprint_id: Optional[int] = None
+    team_id: Optional[int] = None
+    from_date: Optional[date] = None
+    to_date: Optional[date] = None
