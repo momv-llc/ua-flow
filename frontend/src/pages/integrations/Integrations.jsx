@@ -107,6 +107,22 @@ export default function IntegrationsPage() {
   return (
     <div className="grid" style={{ gap: 24 }}>
       <section className="panel">
+        <h2>Активные интеграции</h2>
+        <div className="grid two" style={{ marginTop: 16 }}>
+          {integrations.map((integration) => (
+            <div key={integration.id} className="panel" style={{ background: 'var(--bg-elevated)' }}>
+              <div className="badge-dot">{integration.name}</div>
+              <div style={{ marginTop: 8, color: 'var(--text-muted)' }}>{integration.description}</div>
+              <div style={{ marginTop: 12, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                Тип: {integration.type} • Статус: {integration.status}
+              </div>
+              <div style={{ marginTop: 16, display: 'flex', gap: 12 }}>
+                <button className="secondary" onClick={() => handleAction(integration.id, 'test')}>
+                  Прогон теста
+                </button>
+                <button className="primary" onClick={() => handleAction(integration.id, 'sync')}>
+                  Форсировать синк
+                </button>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2>Активные интеграции</h2>
           <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
@@ -224,7 +240,6 @@ export default function IntegrationsPage() {
               value={webhookPayload}
               onChange={(event) => setWebhookPayload(event.target.value)}
               placeholder='{"event": "task.created", "payload": {"id": 1}}'
-              rows={5}
             />
           </label>
           <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end' }}>
@@ -234,16 +249,7 @@ export default function IntegrationsPage() {
           </div>
         </form>
         {webhookResponse && (
-          <pre
-            style={{
-              marginTop: 16,
-              whiteSpace: 'pre-wrap',
-              background: 'var(--bg-elevated)',
-              padding: 16,
-              borderRadius: 12,
-              fontSize: '0.8rem',
-            }}
-          >
+          <pre style={{ marginTop: 16, whiteSpace: 'pre-wrap', background: 'var(--bg-elevated)', padding: 16, borderRadius: 12 }}>
             {webhookResponse}
           </pre>
         )}
