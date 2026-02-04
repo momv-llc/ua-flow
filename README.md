@@ -2,7 +2,7 @@
 
 Рабочий минимальный продукт по ТЗ: FastAPI backend + React (Vite) frontend + PostgreSQL.
 Бэкенд реализует модули Core/Docs/Support/Integration/Admin/Analytics c JWT и 2FA.
-Запуск через Docker Compose.
+Запуск через Docker Compose. Карта выполнения требований находится в [docs/roadmap.md](docs/roadmap.md).
 
 ## Быстрый старт
 
