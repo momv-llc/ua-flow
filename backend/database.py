@@ -25,6 +25,8 @@ def init_db():
         Epic,
         IntegrationConnection,
         IntegrationLog,
+        MarketplaceApp,
+        MarketplaceInstallation,
         Project,
         Sprint,
         SupportComment,

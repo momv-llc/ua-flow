@@ -6,6 +6,7 @@ import enum
 from datetime import date, datetime
 
 from sqlalchemy import (
+    Boolean,
     Column,
     Date,
     DateTime,
@@ -68,6 +69,15 @@ class IntegrationType(str, enum.Enum):
     diya = "Diia"
     prozorro = "Prozorro"
     webhook = "Webhook"
+
+
+class InvoiceStatus(str, enum.Enum):
+    """Lifecycle statuses for invoices."""
+
+    draft = "draft"
+    sent = "sent"
+    paid = "paid"
+    cancelled = "cancelled"
 
 
 class SprintStatus(str, enum.Enum):
@@ -338,10 +348,13 @@ class IntegrationConnection(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(150), nullable=False)
     integration_type = Column(Enum(IntegrationType), nullable=False)
-    is_active = Column(Integer, default=1)
+    description = Column(Text, default="")
+    is_active = Column(Boolean, default=True)
     settings = Column(JSON, default=dict)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_synced_at = Column(DateTime, nullable=True)
+    last_sync_status = Column(String(100), default="Never synced")
 
     logs = relationship(
         "IntegrationLog",
@@ -358,6 +371,7 @@ class IntegrationLog(Base):
     direction = Column(String(50), default="outbound")
     status = Column(String(50), default="success")
     payload = Column(Text, default="")
+    response_code = Column(Integer, default=200)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     connection = relationship("IntegrationConnection", back_populates="logs")
@@ -393,3 +407,141 @@ class TwoFactorSecret(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User")
+
+
+class MarketplaceApp(Base):
+    __tablename__ = "marketplace_apps"
+
+    id = Column(Integer, primary_key=True)
+    slug = Column(String(150), unique=True, nullable=False)
+    name = Column(String(200), nullable=False)
+    description = Column(Text, default="")
+    category = Column(String(120), default="general")
+    website = Column(String(255), default="")
+    icon = Column(String(255), default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    installations = relationship(
+        "MarketplaceInstallation",
+        back_populates="app",
+        cascade="all, delete-orphan",
+    )
+
+
+class MarketplaceInstallation(Base):
+    __tablename__ = "marketplace_installations"
+
+    id = Column(Integer, primary_key=True)
+    app_id = Column(Integer, ForeignKey("marketplace_apps.id", ondelete="CASCADE"))
+    installed_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"))
+    settings = Column(JSON, default=dict)
+    installed_at = Column(DateTime, default=datetime.utcnow)
+
+    app = relationship("MarketplaceApp", back_populates="installations")
+    installer = relationship("User")
+
+
+class Worklog(Base):
+    __tablename__ = "worklogs"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
+
+    spent_hours = Column(Integer, nullable=False)  # stored in minutes for precision
+    work_date = Column(Date, nullable=False)
+    description = Column(Text, default="")
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    user = relationship("User", foreign_keys=[user_id])
+    task = relationship("Task")
+    project = relationship("Project")
+
+
+class UserRate(Base):
+    __tablename__ = "user_rates"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    currency = Column(String(10), default="USD")
+    hourly_rate = Column(Integer, nullable=False)
+    valid_from = Column(Date, nullable=False)
+    valid_to = Column(Date, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+
+
+class ProjectBudget(Base):
+    __tablename__ = "project_budgets"
+
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), unique=True)
+    currency = Column(String(10), default="USD")
+    planned_hours = Column(Integer, default=0)
+    planned_cost = Column(Integer, default=0)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    project = relationship("Project")
+
+
+class ProjectExpense(Base):
+    __tablename__ = "project_expenses"
+
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"))
+    description = Column(Text, default="")
+    amount = Column(Integer, nullable=False)
+    currency = Column(String(10), default="USD")
+    expense_date = Column(Date, nullable=False)
+    category = Column(String(100), default="general")
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    project = relationship("Project")
+
+
+class Invoice(Base):
+    __tablename__ = "invoices"
+
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
+    external_id = Column(String(50), unique=True, nullable=False)
+
+    client_name = Column(String(255), nullable=False)
+    client_details = Column(Text, default="")
+
+    currency = Column(String(10), default="USD")
+    status = Column(Enum(InvoiceStatus), default=InvoiceStatus.draft)
+
+    issue_date = Column(Date, nullable=False)
+    due_date = Column(Date, nullable=True)
+
+    subtotal = Column(Integer, default=0)
+    tax_amount = Column(Integer, default=0)
+    total = Column(Integer, default=0)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    project = relationship("Project")
+    items = relationship("InvoiceItem", back_populates="invoice", cascade="all, delete-orphan")
+
+
+class InvoiceItem(Base):
+    __tablename__ = "invoice_items"
+
+    id = Column(Integer, primary_key=True)
+    invoice_id = Column(Integer, ForeignKey("invoices.id", ondelete="CASCADE"))
+    description = Column(Text, nullable=False)
+    quantity = Column(Integer, nullable=False)
+    unit_price = Column(Integer, nullable=False)
+    line_total = Column(Integer, nullable=False)
+
+    invoice = relationship("Invoice", back_populates="items")

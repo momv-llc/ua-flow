@@ -5,12 +5,13 @@ from __future__ import annotations
 from collections import Counter
 from datetime import date
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from database import get_db
 from dependencies import get_current_user, require_roles
-from models import SupportTicket, Task, TaskStatus, TicketStatus, User
+from models import Project, SupportTicket, Task, TaskStatus, TicketStatus, User
+from services.timebilling_service import calculate_project_actuals
 
 
 router = APIRouter()
@@ -44,3 +45,24 @@ def workload(db: Session = Depends(get_db), user: User = Depends(get_current_use
         .count()
     )
     return {"open": owned, "overdue": overdue}
+
+
+@router.get("/timebilling/summary")
+def timebilling_summary(
+    project_id: int,
+    from_date: date | None = Query(default=None),
+    to_date: date | None = Query(default=None),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    project = db.get(Project, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    actuals = calculate_project_actuals(db, project_id, from_date, to_date)
+    return {
+        "project_id": project_id,
+        "actual_cost": actuals["cost_total"],
+        "expenses_total": actuals["expenses_total"],
+        "hours_total": actuals["hours_total"],
+        "total_with_expenses": actuals["total_with_expenses"],
+    }
