@@ -1,161 +1,30 @@
-"""Integration hub endpoints for external connectors and marketplace."""
+"""Integration hub endpoints for external connectors."""
 
 from __future__ import annotations
 
 import json
-import os
-from datetime import datetime
-from hashlib import sha256
-import hmac
-from typing import Any, Dict, Iterable
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
 from dependencies import audit_log, get_current_user, require_roles
-from models import (
-    IntegrationConnection,
-    IntegrationLog,
-    MarketplaceApp,
-    MarketplaceInstallation,
-    User,
-)
-from schemas import (
-    IntegrationActionResult,
-    IntegrationCreate,
-    IntegrationLogOut,
-    IntegrationOut,
-    IntegrationUpdate,
-    MarketplaceAppOut,
-    MarketplaceInstallOut,
-)
-from services.integration_clients import IntegrationError, build_client
+from models import IntegrationConnection, IntegrationLog, IntegrationType, User
+from schemas import IntegrationCreate, IntegrationLogOut, IntegrationOut, IntegrationUpdate
 
 
 router = APIRouter()
 
-DEFAULT_MARKETPLACE_APPS: Iterable[Dict[str, Any]] = (
-    {
-        "slug": "telegram-support",
-        "name": "Telegram Support Bot",
-        "description": "Оповещения о тикетах и чат с пользователями через Telegram.",
-        "category": "communication",
-        "website": "https://t.me/",
-        "icon": "telegram",
-    },
-    {
-        "slug": "diia-sign",
-        "name": "Diia Sign",
-        "description": "Интеграция с Дія для проверки и подписи документов.",
-        "category": "compliance",
-        "website": "https://diia.gov.ua/",
-        "icon": "shield",
-    },
-    {
-        "slug": "prozorro-tracker",
-        "name": "Prozorro Tracker",
-        "description": "Мониторинг закупок и объявлений из Prozorro.",
-        "category": "analytics",
-        "website": "https://prozorro.gov.ua/",
-        "icon": "chart",
-    },
-)
 
-WEBHOOK_PREVIEW_SECRET = os.getenv("UA_FLOW_WEBHOOK_SECRET", "ua-flow-preview")
-
-
-# ---------------------------------------------------------------------------
-# Utilities
-# ---------------------------------------------------------------------------
-
-def _serialize_connection(conn: IntegrationConnection) -> IntegrationOut:
-    status = conn.last_sync_status or ("Active" if conn.is_active else "Disabled")
-    payload = {
-        "id": conn.id,
-        "name": conn.name,
-        "integration_type": conn.integration_type,
-        "description": conn.description or "",
-        "is_active": bool(conn.is_active),
-        "status": status,
-        "last_synced_at": conn.last_synced_at,
-        "settings": conn.settings or {},
-        "created_at": conn.created_at,
-        "updated_at": conn.updated_at,
-    }
-    return IntegrationOut.model_validate(payload)
-
-
-def _record_log(
-    db: Session,
-    connection: IntegrationConnection,
-    status: str,
-    payload: Dict[str, Any],
-    response_code: int,
-    direction: str = "outbound",
-) -> IntegrationLog:
-    serialized = json.dumps(payload, ensure_ascii=False)[:2000]
-    log = IntegrationLog(
-        connection_id=connection.id,
-        direction=direction,
-        status=status,
-        payload=serialized,
-        response_code=response_code,
-    )
-    connection.last_synced_at = datetime.utcnow()
-    if status == "success":
-        connection.last_sync_status = "Success"
-    else:
-        connection.last_sync_status = f"Failed ({status})"
-    db.add(log)
-    db.add(connection)
-    db.commit()
-    db.refresh(log)
-    db.refresh(connection)
-    return log
-
-
-def _ensure_marketplace_catalog(db: Session) -> None:
-    if db.query(MarketplaceApp).count():
-        return
-    for item in DEFAULT_MARKETPLACE_APPS:
-        db.add(MarketplaceApp(**item))
-    db.commit()
-
-
-def _serialize_marketplace_app(
-    app: MarketplaceApp, installation: MarketplaceInstallation | None
-) -> MarketplaceAppOut:
-    return MarketplaceAppOut(
-        id=app.id,
-        slug=app.slug,
-        name=app.name,
-        description=app.description,
-        category=app.category,
-        website=app.website or None,
-        icon=app.icon or None,
-        installed=bool(installation),
-        installed_at=installation.installed_at if installation else None,
-    )
-
-
-# ---------------------------------------------------------------------------
-# Integration connections
-# ---------------------------------------------------------------------------
-
-
-@router.get("/connections", response_model=list[IntegrationOut])
-def list_integrations(
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
+@router.get("/", response_model=list[IntegrationOut])
+def list_integrations(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    query = db.query(IntegrationConnection)
     if user.role not in {"admin", "integrator"}:
         raise HTTPException(status_code=403, detail="Integrator role required")
-    connections = db.query(IntegrationConnection).order_by(IntegrationConnection.name).all()
-    return [_serialize_connection(conn) for conn in connections]
+    return query.all()
 
 
-@router.post("/connections", response_model=IntegrationOut, status_code=201)
+@router.post("/", response_model=IntegrationOut, status_code=201)
 def create_integration(
     payload: IntegrationCreate,
     db: Session = Depends(get_db),
@@ -164,17 +33,16 @@ def create_integration(
     conn = IntegrationConnection(
         name=payload.name,
         integration_type=payload.integration_type,
-        description=payload.description or "",
-        settings=payload.settings or {},
+        settings=payload.settings,
     )
     db.add(conn)
     db.commit()
     db.refresh(conn)
     audit_log(user, "integration.created", {"connection_id": conn.id}, db)
-    return _serialize_connection(conn)
+    return conn
 
 
-@router.put("/connections/{connection_id}", response_model=IntegrationOut)
+@router.put("/{connection_id}", response_model=IntegrationOut)
 def update_integration(
     connection_id: int,
     payload: IntegrationUpdate,
@@ -250,6 +118,27 @@ def trigger_sync(
     if not conn.is_active:
         raise HTTPException(status_code=400, detail="Integration disabled")
 
+    # Simulate an exchange by storing the payload as JSON.
+    serialized = json.dumps(payload, ensure_ascii=False)
+    log = IntegrationLog(
+        connection_id=conn.id,
+        direction="outbound",
+        status="success",
+        payload=serialized[:2000],
+    )
+    db.add(log)
+    db.commit()
+    db.refresh(log)
+    audit_log(
+        user,
+        "integration.sync",
+        {"connection_id": conn.id, "log_id": log.id},
+        db,
+    )
+    return log
+
+
+@router.get("/{connection_id}/logs", response_model=list[IntegrationLogOut])
     client = build_client(conn.integration_type, conn.settings)
     try:
         result = client.sync(payload or {})
@@ -291,6 +180,10 @@ def list_logs(
         raise HTTPException(status_code=404, detail="Integration not found")
     return (
         db.query(IntegrationLog)
+        .filter(IntegrationLog.connection_id == connection_id)
+        .order_by(IntegrationLog.created_at.desc())
+        .all()
+    )
             .filter(IntegrationLog.connection_id == connection_id)
             .order_by(IntegrationLog.created_at.desc())
             .all()

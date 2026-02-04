@@ -9,7 +9,6 @@ from pydantic import BaseModel, EmailStr, Field
 
 from models import (
     IntegrationType,
-    InvoiceStatus,
     SprintStatus,
     TaskPriority,
     TaskStatus,
@@ -216,6 +215,21 @@ class TaskUpdate(BaseModel):
 class TaskOut(TaskBase):
     id: int
     owner_id: Optional[int]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class TaskCommentCreate(BaseModel):
+    message: str
+
+
+class TaskCommentOut(BaseModel):
+    id: int
+    task_id: int
+    author_id: Optional[int]
+    message: str
     created_at: datetime
 
     class Config:
