@@ -5,9 +5,9 @@ from __future__ import annotations
 from fastapi import Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
-from database import get_db
-from models import AuditLog, User
-from security import decode_token
+from backend.database import get_db
+from backend.models import AuditLog, User
+from backend.security import decode_token
 
 
 def get_current_user(

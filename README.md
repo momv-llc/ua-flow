@@ -32,3 +32,13 @@ docker compose up --build
 ## Переменные окружения (пример)
 
 Смотри `.env.example`. Для локального docker-compose значения уже прописаны.
+
+## Проверка сборки в Ubuntu Docker
+
+Для быстрой проверки совместимости зависимостей с чистым образом Ubuntu 24.04 выполните:
+
+```bash
+./scripts/test_ubuntu_docker.sh
+```
+
+Скрипт поднимет одноразовый контейнер `ubuntu:24.04`, установит Python и Node.js, соберёт фронтенд и выполнит компиляцию бэкенда. Подробнее — в [docs/testing/ubuntu-docker.md](docs/testing/ubuntu-docker.md).

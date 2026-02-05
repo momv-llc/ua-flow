@@ -20,7 +20,7 @@ from schemas import (
     UserLogin,
     UserOut,
 )
-from security import (
+from backend.security import (
     create_access_token,
     create_refresh_token,
     decode_token,

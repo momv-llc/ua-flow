@@ -12,16 +12,16 @@ from typing import Any, Dict, Iterable
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from database import get_db
-from dependencies import audit_log, get_current_user, require_roles
-from models import (
+from backend.database import get_db
+from backend.dependencies import audit_log, get_current_user, require_roles
+from backend.models import (
     IntegrationConnection,
     IntegrationLog,
     MarketplaceApp,
     MarketplaceInstallation,
     User,
 )
-from schemas import (
+from backend.schemas import (
     IntegrationActionResult,
     IntegrationCreate,
     IntegrationLogOut,
@@ -30,7 +30,7 @@ from schemas import (
     MarketplaceAppOut,
     MarketplaceInstallOut,
 )
-from services.integration_clients import IntegrationError, build_client
+from backend.services.integration_clients import IntegrationError, build_client
 
 
 router = APIRouter()
@@ -171,10 +171,10 @@ def create_integration(
     db.commit()
     db.refresh(conn)
     audit_log(user, "integration.created", {"connection_id": conn.id}, db)
-    return _serialize_connection(conn)
+    return conn
 
 
-@router.put("/connections/{connection_id}", response_model=IntegrationOut)
+@router.put("/{connection_id}", response_model=IntegrationOut)
 def update_integration(
     connection_id: int,
     payload: IntegrationUpdate,
@@ -250,6 +250,27 @@ def trigger_sync(
     if not conn.is_active:
         raise HTTPException(status_code=400, detail="Integration disabled")
 
+    # Simulate an exchange by storing the payload as JSON.
+    serialized = json.dumps(payload, ensure_ascii=False)
+    log = IntegrationLog(
+        connection_id=conn.id,
+        direction="outbound",
+        status="success",
+        payload=serialized[:2000],
+    )
+    db.add(log)
+    db.commit()
+    db.refresh(log)
+    audit_log(
+        user,
+        "integration.sync",
+        {"connection_id": conn.id, "log_id": log.id},
+        db,
+    )
+    return log
+
+
+@router.get("/{connection_id}/logs", response_model=list[IntegrationLogOut])
     client = build_client(conn.integration_type, conn.settings)
     try:
         result = client.sync(payload or {})
@@ -291,6 +312,10 @@ def list_logs(
         raise HTTPException(status_code=404, detail="Integration not found")
     return (
         db.query(IntegrationLog)
+        .filter(IntegrationLog.connection_id == connection_id)
+        .order_by(IntegrationLog.created_at.desc())
+        .all()
+    )
             .filter(IntegrationLog.connection_id == connection_id)
             .order_by(IntegrationLog.created_at.desc())
             .all()
