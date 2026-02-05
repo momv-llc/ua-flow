@@ -1,9 +1,11 @@
 from fastapi import FastAPI
+from database import init_db
+from routers import analytics, auth, docs, integration, projects, support, tasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
-from .database import init_db
-from .routers import analytics, auth, docs, integration, projects, support, tasks
+from database import init_db
+from routers import analytics, auth, docs, integration, projects, support, tasks
 
 app = FastAPI(
     title="UA FLOW MVP",

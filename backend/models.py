@@ -89,7 +89,7 @@ class User(Base):
     role = Column(String(50), default="user")
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    tasks = relationship("Task", back_populates="owner", foreign_keys="Task.owner_id")
+    tasks = relationship("Task", back_populates="owner")
     assignments = relationship(
         "Task",
         back_populates="assignee",
@@ -374,7 +374,7 @@ class AuditLog(Base):
     id = Column(Integer, primary_key=True)
     actor_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"))
     action = Column(String(255), nullable=False)
-    details = Column(JSON, default=dict)
+    metadata = Column(JSON, default=dict)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     actor = relationship("User")

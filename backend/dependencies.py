@@ -50,6 +50,6 @@ def audit_log(
 ) -> None:
     """Persist an audit record for the performed action."""
 
-    record = AuditLog(actor_id=user.id if user else None, action=action, details=metadata or {})
+    record = AuditLog(actor_id=user.id if user else None, action=action, metadata=metadata or {})
     db.add(record)
     db.commit()

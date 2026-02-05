@@ -52,7 +52,7 @@ def audit_trail(db: Session = Depends(get_db), user: User = Depends(require_role
             "id": log.id,
             "actor_id": log.actor_id,
             "action": log.action,
-            "metadata": log.details,
+            "metadata": log.metadata,
             "created_at": log.created_at,
         }
         for log in logs
