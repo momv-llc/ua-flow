@@ -70,7 +70,7 @@ def get_db():
 
 def init_db():
     # Import models so metadata is populated before create_all.
-    from .models import (  # noqa: F401
+    from models import (  # noqa: F401
         AuditLog,
         Doc,
         DocSignature,

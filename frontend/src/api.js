@@ -92,14 +92,6 @@ export async function register(email, password) {
   })
 }
 
-export async function refreshToken(refresh_token) {
-  return request('/auth/refresh', {
-    method: 'POST',
-    data: { refresh_token },
-    auth: false,
-  })
-}
-
 export async function getCurrentUser() {
   return request('/auth/me')
 }

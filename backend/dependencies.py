@@ -5,9 +5,9 @@ from __future__ import annotations
 from fastapi import Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
-from backend.database import get_db
-from backend.models import AuditLog, User
-from backend.security import decode_token
+from database import get_db
+from models import AuditLog, User
+from security import decode_token
 
 
 def get_current_user(
@@ -50,6 +50,6 @@ def audit_log(
 ) -> None:
     """Persist an audit record for the performed action."""
 
-    record = AuditLog(actor_id=user.id if user else None, action=action, details=metadata or {})
+    record = AuditLog(actor_id=user.id if user else None, action=action, metadata=metadata or {})
     db.add(record)
     db.commit()

@@ -7,11 +7,12 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from backend.database import get_db
-from backend.dependencies import audit_log, require_roles
-from backend.models import AuditLog as AuditLogModel
-from backend.models import Project, SupportTicket, SystemSetting, Task, TicketStatus, User
-from backend.schemas import DashboardMetric, RoleUpdate, UserOut
+from database import get_db
+from dependencies import audit_log, require_roles
+from models import AuditLog as AuditLogModel
+from models import Project, SupportTicket, SystemSetting, Task, User
+from models import TicketStatus
+from schemas import DashboardMetric, RoleUpdate, UserOut
 
 
 router = APIRouter()
@@ -52,7 +53,7 @@ def audit_trail(db: Session = Depends(get_db), user: User = Depends(require_role
             "id": log.id,
             "actor_id": log.actor_id,
             "action": log.action,
-            "metadata": log.details,
+            "metadata": log.metadata,
             "created_at": log.created_at,
         }
         for log in logs

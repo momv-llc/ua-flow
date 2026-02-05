@@ -7,10 +7,10 @@ from urllib.parse import quote
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from backend.database import get_db
-from backend.dependencies import audit_log, get_current_user
-from backend.models import TwoFactorSecret, User
-from backend.schemas import (
+from database import get_db
+from dependencies import audit_log, get_current_user
+from models import TwoFactorSecret, User
+from schemas import (
     RefreshTokenIn,
     RoleUpdate,
     TokenOut,
