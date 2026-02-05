@@ -164,7 +164,8 @@ def create_integration(
     conn = IntegrationConnection(
         name=payload.name,
         integration_type=payload.integration_type,
-        settings=payload.settings,
+        description=payload.description or "",
+        settings=payload.settings or {},
     )
     db.add(conn)
     db.commit()

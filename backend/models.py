@@ -80,64 +80,6 @@ class SprintStatus(str, enum.Enum):
     closed = "Closed"
 
 
-
-class TaskStatus(str, enum.Enum):
-    """Supported statuses for project tasks."""
-
-    todo = "ToDo"
-    in_progress = "In Progress"
-    review = "Review"
-    done = "Done"
-
-
-class TaskPriority(str, enum.Enum):
-    """Supported priority levels for tasks."""
-
-    low = "Low"
-    medium = "Medium"
-    high = "High"
-    critical = "Critical"
-
-
-class TicketStatus(str, enum.Enum):
-    """Lifecycle statuses for Service Desk tickets."""
-
-    new = "New"
-    in_progress = "In Progress"
-    waiting = "Waiting"
-    resolved = "Resolved"
-    closed = "Closed"
-
-
-class TicketPriority(str, enum.Enum):
-    """SLA-driven ticket priorities."""
-
-    low = "Low"
-    normal = "Normal"
-    high = "High"
-    urgent = "Urgent"
-
-
-class IntegrationType(str, enum.Enum):
-    """Available integration connector types."""
-
-    one_c = "1C"
-    medoc = "Medoc"
-    spi = "SPI"
-    diya = "Diia"
-    prozorro = "Prozorro"
-    webhook = "Webhook"
-
-
-class SprintStatus(str, enum.Enum):
-    """Scrum sprint lifecycle states."""
-
-    planned = "Planned"
-    active = "Active"
-    completed = "Completed"
-    closed = "Closed"
-
-
 class User(Base):
     __tablename__ = "users"
 

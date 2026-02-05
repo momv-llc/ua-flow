@@ -10,7 +10,6 @@ from typing import Any, Dict
 import httpx
 
 from backend.models import IntegrationType
-from models import IntegrationType
 
 
 class IntegrationError(Exception):
