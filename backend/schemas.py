@@ -7,9 +7,8 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
-from models import (
+from backend.models import (
     IntegrationType,
-    InvoiceStatus,
     SprintStatus,
     TaskPriority,
     TaskStatus,
@@ -216,6 +215,21 @@ class TaskUpdate(BaseModel):
 class TaskOut(TaskBase):
     id: int
     owner_id: Optional[int]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class TaskCommentCreate(BaseModel):
+    message: str
+
+
+class TaskCommentOut(BaseModel):
+    id: int
+    task_id: int
+    author_id: Optional[int]
+    message: str
     created_at: datetime
 
     class Config:
@@ -563,3 +577,28 @@ class InvoiceOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class IntegrationLogOut(BaseModel):
+    id: int
+    direction: str
+    status: str
+    payload: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class DashboardMetric(BaseModel):
+    name: str
+    value: Any
+    delta: Optional[float] = None
+
+
+class ReportFilters(BaseModel):
+    project_id: Optional[int] = None
+    sprint_id: Optional[int] = None
+    team_id: Optional[int] = None
+    from_date: Optional[date] = None
+    to_date: Optional[date] = None

@@ -1,4 +1,15 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
+const resolveDefaultApiUrl = () => {
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return 'http://localhost:8000/api/v1'
+    }
+    return '/api/v1'
+  }
+  return 'http://localhost:8000/api/v1'
+}
+
+const API_URL = (import.meta.env.VITE_API_URL || resolveDefaultApiUrl()).replace(/\/$/, '')
 
 async function request(path, { method = 'GET', data, params, headers, auth = true } = {}) {
   const url = new URL(`${API_URL}${path}`)
@@ -39,10 +50,28 @@ async function request(path, { method = 'GET', data, params, headers, auth = tru
   }
 
   const text = await res.text()
-  const payload = text ? JSON.parse(text) : null
+  const contentType = res.headers.get('content-type') || ''
+  let payload = null
+  if (text && contentType.includes('application/json')) {
+    try {
+      payload = JSON.parse(text)
+    } catch (error) {
+      const snippet = text.length > 120 ? `${text.slice(0, 117)}...` : text
+      throw new Error(`Unexpected response from server: ${snippet}`)
+    }
+  }
   if (!res.ok) {
-    const detail = payload?.detail || res.statusText
+    const detail = payload?.detail || (text && !contentType.includes('application/json') ? text : res.statusText)
     throw new Error(Array.isArray(detail) ? detail.join(', ') : detail)
+  }
+  if (payload !== null) {
+    return payload
+  }
+  if (!text) {
+    return null
+  }
+  if (!contentType.includes('application/json')) {
+    throw new Error('Server returned an unexpected response format. Please try again later.')
   }
   return payload
 }

@@ -224,7 +224,6 @@ export default function IntegrationsPage() {
               value={webhookPayload}
               onChange={(event) => setWebhookPayload(event.target.value)}
               placeholder='{"event": "task.created", "payload": {"id": 1}}'
-              rows={5}
             />
           </label>
           <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end' }}>
