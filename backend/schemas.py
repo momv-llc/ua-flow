@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
-from models import (
+from backend.models import (
     IntegrationType,
     SprintStatus,
     TaskPriority,

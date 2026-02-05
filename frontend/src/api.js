@@ -21,16 +21,6 @@ async function request(path, { method = 'GET', data, params, headers, auth = tru
     })
   }
 
-async function request(path, { method = 'GET', data, params, headers, auth = true } = {}) {
-  const url = new URL(`${API_URL}${path}`)
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        url.searchParams.append(key, value)
-      }
-    })
-  }
-
   const finalHeaders = new Headers(headers || {})
   if (auth) {
     const token = localStorage.getItem('token')
@@ -83,11 +73,6 @@ async function request(path, { method = 'GET', data, params, headers, auth = tru
   if (!contentType.includes('application/json')) {
     throw new Error('Server returned an unexpected response format. Please try again later.')
   }
-  const payload = text ? JSON.parse(text) : null
-  if (!res.ok) {
-    const detail = payload?.detail || res.statusText
-    throw new Error(Array.isArray(detail) ? detail.join(', ') : detail)
-  }
   return payload
 }
 
@@ -103,14 +88,6 @@ export async function register(email, password) {
   return request('/auth/register', {
     method: 'POST',
     data: { email, password },
-    auth: false,
-  })
-}
-
-export async function refreshToken(refresh_token) {
-  return request('/auth/refresh', {
-    method: 'POST',
-    data: { refresh_token },
     auth: false,
   })
 }

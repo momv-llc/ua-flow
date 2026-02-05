@@ -5,10 +5,10 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from database import get_db
-from dependencies import audit_log, get_current_user, require_roles
-from models import Epic, Project, Sprint, Team, TeamMember, User
-from schemas import (
+from backend.database import get_db
+from backend.dependencies import audit_log, get_current_user, require_roles
+from backend.models import Epic, Project, Sprint, Team, TeamMember, User
+from backend.schemas import (
     EpicCreate,
     EpicOut,
     ProjectCreate,
