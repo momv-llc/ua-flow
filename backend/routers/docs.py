@@ -5,10 +5,10 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from database import get_db
-from dependencies import audit_log, get_current_user
-from models import Doc, DocSignature, DocVersion, User
-from schemas import (
+from backend.database import get_db
+from backend.dependencies import audit_log, get_current_user
+from backend.models import Doc, DocSignature, DocVersion, User
+from backend.schemas import (
     DocCreate,
     DocOut,
     DocSignatureCreate,

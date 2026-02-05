@@ -7,12 +7,11 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from database import get_db
-from dependencies import audit_log, require_roles
-from models import AuditLog as AuditLogModel
-from models import Project, SupportTicket, SystemSetting, Task, User
-from models import TicketStatus
-from schemas import DashboardMetric, RoleUpdate, UserOut
+from backend.database import get_db
+from backend.dependencies import audit_log, require_roles
+from backend.models import AuditLog as AuditLogModel
+from backend.models import Project, SupportTicket, SystemSetting, Task, TicketStatus, User
+from backend.schemas import DashboardMetric, RoleUpdate, UserOut
 
 
 router = APIRouter()

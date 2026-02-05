@@ -5,13 +5,12 @@ from __future__ import annotations
 from collections import Counter
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from database import get_db
 from dependencies import get_current_user, require_roles
-from models import Project, SupportTicket, Task, TaskStatus, TicketStatus, User
-from services.timebilling_service import calculate_project_actuals
+from models import SupportTicket, Task, TaskStatus, TicketStatus, User
 
 
 router = APIRouter()
