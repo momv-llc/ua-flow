@@ -9,7 +9,7 @@ from typing import Any, Dict
 
 import httpx
 
-from models import IntegrationType
+from backend.models import IntegrationType
 
 
 class IntegrationError(Exception):
