@@ -20,7 +20,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from database import Base
+from .database import Base
 
 
 class TaskStatus(str, enum.Enum):
